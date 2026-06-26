@@ -121,12 +121,12 @@ function useInView(threshold = 0.4) {
 
 // ─── Navbar ──────────────────────────────────────────────────────────────────
 
-function Navbar({ isDark, onToggle }) {
+function Navbar({ isDark, onToggle, onLaunch }) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-5 md:px-10">
       <div className="flex items-center gap-2 font-semibold text-base tracking-[0.25em] uppercase text-foreground select-none">
         <Eye className="w-5 h-5 text-[var(--argus)]" strokeWidth={2.5} aria-hidden="true" />
-        ARGUS
+        <span>ARG<span className="text-[var(--argus)]">U</span>S</span>
       </div>
       <div className="flex items-center gap-2">
         <Button
@@ -141,6 +141,7 @@ function Navbar({ isDark, onToggle }) {
         <Button
           variant="outline"
           size="sm"
+          onClick={onLaunch}
           className="rounded-full text-xs tracking-widest uppercase"
         >
           Launch App
@@ -182,7 +183,7 @@ function HeroSection({ id }) {
       >
         <h1 className="font-bold leading-none tracking-tighter text-foreground select-none"
             style={{ fontSize: 'clamp(4.5rem, 17vw, 14rem)' }}>
-          ARGUS
+          ARG<span className="text-[var(--argus)]">U</span>S
         </h1>
         <p
           className="text-muted-foreground mt-6 text-sm md:text-base tracking-[0.25em] uppercase transition-all duration-700"
@@ -383,7 +384,7 @@ function AudienceSection({ id }) {
 
 // ─── Footer / CTA ─────────────────────────────────────────────────────────────
 
-function FooterSection({ id }) {
+function FooterSection({ id, onLaunch }) {
   const [ref, visible] = useInView(0.5)
 
   return (
@@ -404,6 +405,7 @@ function FooterSection({ id }) {
 
         <Button
           size="lg"
+          onClick={onLaunch}
           className="rounded-sm gap-2 font-semibold tracking-wide px-8 h-12 group"
           style={{ background: 'var(--argus)', color: 'oklch(0.145 0 0)' }}
         >
@@ -449,10 +451,9 @@ function FooterSection({ id }) {
 
 const SECTIONS = ['hero', 'feature-1', 'feature-2', 'feature-3', 'feature-4', 'audience', 'footer']
 
-export default function LandingPage() {
+export default function LandingPage({ isDark, onToggle, onLaunch }) {
   const containerRef = useRef(null)
   const [activeSection, setActiveSection] = useState(0)
-  const [isDark, setIsDark] = useState(true)
 
   useEffect(() => {
     const el = containerRef.current
@@ -463,10 +464,6 @@ export default function LandingPage() {
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark)
-  }, [isDark])
 
   const scrollTo = (i) => {
     containerRef.current?.scrollTo({ top: i * window.innerHeight, behavior: 'smooth' })
@@ -505,7 +502,7 @@ export default function LandingPage() {
       `}</style>
 
       <BackgroundCanvas isDark={isDark} />
-      <Navbar isDark={isDark} onToggle={() => setIsDark(p => !p)} />
+      <Navbar isDark={isDark} onToggle={onToggle} onLaunch={onLaunch} />
 
       {/* Dot navigation */}
       <div
@@ -533,7 +530,7 @@ export default function LandingPage() {
           <FeatureSection key={f.id} {...f} />
         ))}
         <AudienceSection id={SECTIONS[5]} />
-        <FooterSection id={SECTIONS[6]} />
+        <FooterSection id={SECTIONS[6]} onLaunch={onLaunch} />
       </main>
     </div>
   )
