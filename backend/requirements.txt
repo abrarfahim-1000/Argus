@@ -1,0 +1,33 @@
+# Server
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+
+# LLM + Agents
+langchain-core
+langchain-google-genai
+langchain-openai
+langgraph
+google-generativeai
+
+# Market Data
+yfinance
+pandas
+pytz
+
+# News Pipeline
+feedparser
+httpx
+beautifulsoup4
+apscheduler
+
+# RAG
+sentence-transformers
+qdrant-client
+tiktoken
+
+# Database
+sqlalchemy
+alembic
+psycopg2-binary

@@ -1,0 +1,84 @@
+# ── Node / npm ──────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.pnp
+.pnp.js
+
+# ── Vite / React build ───────────────────────────────────────────────────────
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# Distribution / packaging
+*.egg
+*.egg-info/
+build/
+.eggs/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# mypy / type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# ── Alembic ──────────────────────────────────────────────────────────────────
+# Keep alembic/ source; ignore generated pycache inside it
+backend/alembic/__pycache__/
+
+# ── Environment / secrets ─────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ── Editors ──────────────────────────────────────────────────────────────────
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# JetBrains
+.idea/
+*.iml
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak
+.cache/
