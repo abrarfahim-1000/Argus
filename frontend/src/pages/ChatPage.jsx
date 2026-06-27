@@ -1,15 +1,25 @@
 import { useRef, useEffect } from 'react'
 import { useMarketTicker } from '@/hooks/useMarketTicker'
+import { useSuggestions } from '@/hooks/useSuggestions'
 import Markdown from 'react-markdown'
 import {
   Eye, Sun, Moon, Search, ArrowUp,
   TrendingDown, TrendingUp, CalendarDays, Landmark,
   Sparkles, ArrowLeft, ExternalLink,
+  BarChart2, Activity, Globe, Newspaper,
+  Zap, AlertTriangle, DollarSign, Bitcoin, Flame,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useChat } from '@/hooks/useChat'
 import { cn } from '@/lib/utils'
+
+const ICON_MAP = {
+  TrendingUp, TrendingDown, BarChart2, Activity,
+  Landmark, Globe, CalendarDays, Newspaper,
+  Zap, AlertTriangle, DollarSign, Bitcoin,
+  Flame, Sparkles,
+}
 
 // ─── Market Ticker ────────────────────────────────────────────────────────────
 
@@ -135,37 +145,35 @@ function HeroHeader({ collapsed }) {
 
 // ─── Prompt Suggestions ───────────────────────────────────────────────────────
 
-const SUGGESTIONS = [
-  { Icon: TrendingDown, title: 'Why is Nvidia falling today?',      desc: 'Analyze technicals and news driving NVDA.' },
-  { Icon: TrendingUp,   title: 'Why is Bitcoin rising this week?',  desc: 'Check ETF inflows and macro drivers.' },
-  { Icon: CalendarDays, title: 'What should I watch this week?',    desc: 'Upcoming earnings and economic data.' },
-  { Icon: Landmark,     title: 'What did the Fed say about rates?', desc: 'Summary of latest FOMC statements.' },
-]
-
 function PromptSuggestions({ onSelect }) {
+  const { suggestions } = useSuggestions()
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-      {SUGGESTIONS.map(({ Icon, title, desc }, i) => (
-        <button
-          key={i}
-          onClick={() => onSelect(title)}
-          className={cn(
-            'text-left p-5 rounded-2xl border group cursor-pointer',
-            'bg-white/50 dark:bg-white/[0.04] backdrop-blur-xl',
-            'border-black/[0.08] dark:border-white/[0.08]',
-            'hover:bg-[var(--argus)]/[0.08] hover:border-[var(--argus)]/40',
-            'hover:-translate-y-1.5',
-            'hover:shadow-[0_12px_32px_-8px_rgba(0,136,170,0.18)]',
-            'dark:hover:shadow-[0_12px_32px_-8px_rgba(0,212,255,0.18)]',
-            'transition-all duration-300 ease-out',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--argus)]/50',
-          )}
-        >
-          <Icon className="w-5 h-5 text-[var(--argus)] mb-3" aria-hidden="true" />
-          <p className="text-sm font-medium text-foreground mb-1">{title}</p>
-          <p className="text-xs text-muted-foreground line-clamp-1">{desc}</p>
-        </button>
-      ))}
+      {suggestions.map(({ icon, title, desc }, i) => {
+        const Icon = ICON_MAP[icon] ?? Sparkles
+        return (
+          <button
+            key={i}
+            onClick={() => onSelect(title)}
+            className={cn(
+              'text-left p-5 rounded-2xl border group cursor-pointer',
+              'bg-white/50 dark:bg-white/[0.04] backdrop-blur-xl',
+              'border-black/[0.08] dark:border-white/[0.08]',
+              'hover:bg-[var(--argus)]/[0.08] hover:border-[var(--argus)]/40',
+              'hover:-translate-y-1.5',
+              'hover:shadow-[0_12px_32px_-8px_rgba(0,136,170,0.18)]',
+              'dark:hover:shadow-[0_12px_32px_-8px_rgba(0,212,255,0.18)]',
+              'transition-all duration-300 ease-out',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--argus)]/50',
+            )}
+          >
+            <Icon className="w-5 h-5 text-[var(--argus)] mb-3" aria-hidden="true" />
+            <p className="text-sm font-medium text-foreground mb-1">{title}</p>
+            <p className="text-xs text-muted-foreground line-clamp-1">{desc}</p>
+          </button>
+        )
+      })}
     </div>
   )
 }

@@ -27,3 +27,13 @@ export async function fetchMarketSnapshot() {
   if (!res.ok) throw new Error(`Market snapshot failed: ${res.status}`)
   return res.json()
 }
+
+/**
+ * GET /suggestions
+ * @returns {Promise<Array<{ icon: string, title: string, desc: string }>>}
+ */
+export async function fetchSuggestions() {
+  const res = await fetch(`${BASE_URL}/suggestions`)
+  if (!res.ok) throw new Error(`Suggestions failed: ${res.status}`)
+  return res.json()
+}

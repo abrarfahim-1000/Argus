@@ -13,7 +13,7 @@ The repo is a monorepo:
 | `frontend/` | React 19, Vite 8, Tailwind CSS 4, shadcn/ui (JSX, not TSX) |
 | `backend/` | Python / FastAPI, LangGraph, LangChain, SQLAlchemy + Alembic, Qdrant |
 
-**Current state:** Phases 1–4 are complete. The chat UI is live end-to-end: the backend serves `/health`, `/chat`, and `/market/snapshot`; the frontend polls market data every 30 s and renders the live ticker. Next milestone is Phase 5: news ingestion pipeline.
+**Current state:** Phases 1–6 are complete. The chat UI is live end-to-end: the backend serves `/health`, `/chat`, `/market/snapshot`, and `/suggestions`; the frontend polls market data every 30 s, renders the live ticker, and loads dynamic LLM-generated prompt cards on startup. News is ingested from four RSS feeds every 15 min via APScheduler. Next milestone is Phase 7: RAG pipeline (Qdrant embeddings).
 
 See `docs/BACKEND_PHASES.md` for the full phase plan and statuses.
 
@@ -73,7 +73,8 @@ frontend/src/
 │   └── ui/                  # shadcn components (badge, button, card, …)
 ├── hooks/
 │   ├── useChat.js           # chat state + POST /chat
-│   └── useMarketTicker.js   # polls GET /market/snapshot every 30 s
+│   ├── useMarketTicker.js   # polls GET /market/snapshot every 30 s
+│   └── useSuggestions.js    # fetches GET /suggestions on mount; falls back to static
 ├── pages/
 │   └── ChatPage.jsx         # full chat UI: ticker, nav, suggestions, messages, input
 ├── LandingPage.jsx          # marketing landing page (complete)
@@ -88,22 +89,21 @@ frontend/src/
 
 **Planned frontend additions:**
 
-| File | Phase | Purpose |
-|---|---|---|
-| `src/hooks/useSuggestions.js` | 6 | Fetches dynamic prompt cards from `GET /suggestions`; falls back to static |
+None for Phases 7–9 — all remaining work is backend-only.
 
 ### Backend — Current File Structure
 
 ```
 backend/
 ├── app/
-│   ├── main.py              # FastAPI entry point, CORS, lifespan hooks
+│   ├── main.py              # FastAPI entry point, CORS, lifespan hooks, logging config
 │   ├── config.py            # pydantic-settings reading .env
 │   ├── api/
 │   │   ├── __init__.py
 │   │   ├── health.py        # GET /health
 │   │   ├── chat.py          # POST /chat
-│   │   └── market.py        # GET /market/snapshot
+│   │   ├── market.py        # GET /market/snapshot
+│   │   └── suggestions.py   # GET /suggestions — 4 dynamic prompt cards, 15-min TTL cache
 │   ├── db/
 │   │   ├── __init__.py
 │   │   ├── models.py        # Article, Conversation, Message (SQLAlchemy)
@@ -112,26 +112,26 @@ backend/
 │   ├── llm/
 │   │   ├── __init__.py
 │   │   ├── provider.py      # get_llm() — Gemini | OpenRouter switcher
-│   │   └── prompts.py       # prompt templates
+│   │   ├── prompts.py       # prompt templates
+│   │   └── suggestions.py   # prompt builder + LLM call + Pydantic validation
+│   ├── pipeline/
+│   │   ├── __init__.py
+│   │   ├── news_ingestion.py  # fetch → deduplicate by URL → store to articles table
+│   │   └── scheduler.py       # APScheduler (15-min interval), wired into lifespan
 │   └── tools/
 │       ├── __init__.py
-│       └── market_tools.py  # fetch_snapshot() — intraday yfinance (1 m bars)
+│       ├── market_tools.py  # fetch_snapshot() — intraday yfinance (1 m bars)
+│       └── news_tools.py    # parse_feeds() — RSS parser for 4 sources
 ├── alembic/
 ├── alembic.ini
 ├── requirements.txt
 └── .env.example
 ```
 
-**Planned backend additions (Phases 5–9):**
+**Planned backend additions (Phases 7–9):**
 
 | File | Phase | Purpose |
 |---|---|---|
-| `app/tools/news_tools.py` | 5 | RSS feed parser + article HTML fetch |
-| `app/pipeline/news_ingestion.py` | 5 | fetch → deduplicate by URL → store to `articles` |
-| `app/pipeline/scheduler.py` | 5 | APScheduler wired into FastAPI lifespan (15-min refresh) |
-| `app/agents/news_agent.py` | 5 | News agent stub |
-| `app/api/suggestions.py` | 6 | GET /suggestions — 4 dynamic prompt cards, 15-min TTL cache |
-| `app/llm/suggestions.py` | 6 | Prompt builder + OpenRouter call + Pydantic validation |
 | `app/rag/embedder.py` | 7 | sentence-transformers batch embed |
 | `app/rag/chunker.py` | 7 | tiktoken chunking (512 tokens, 50 overlap) |
 | `app/rag/retriever.py` | 7 | Qdrant top-k search |
@@ -195,7 +195,7 @@ def get_llm():
 
 Tracked assets: `SPY`, `QQQ`, `NVDA`, `MSFT`, `AAPL`, `META`, `INTC`, `VIX`, `BTC`, `GC=F`, `ETH`, `DJI`, `CL=F`
 
-**GET /suggestions** *(Phase 6)* — returns 4 LLM-generated prompt cards:
+**GET /suggestions** — returns 4 LLM-generated prompt cards (15-min server-side cache):
 ```json
 [{ "icon": "TrendingDown", "title": "...", "desc": "..." }]
 ```
