@@ -1,3 +1,3 @@
-from . import chat, health
+from . import chat, health, market
 
-__all__ = ["chat", "health"]
+__all__ = ["chat", "health", "market"]

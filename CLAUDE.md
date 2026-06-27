@@ -13,7 +13,9 @@ The repo is a monorepo:
 | `frontend/` | React 19, Vite 8, Tailwind CSS 4, shadcn/ui (JSX, not TSX) |
 | `backend/` | Python / FastAPI, LangGraph, LangChain, SQLAlchemy + Alembic, Qdrant |
 
-**Current state:** The landing page (`frontend/src/LandingPage.jsx`) is complete. The backend source has not been scaffolded yet — only `requirements.txt` exists. The next milestone is Phase 1: wiring FastAPI + React chat end-to-end with Gemini.
+**Current state:** Phases 1–4 are complete. The chat UI is live end-to-end: the backend serves `/health`, `/chat`, and `/market/snapshot`; the frontend polls market data every 30 s and renders the live ticker. Next milestone is Phase 5: news ingestion pipeline.
+
+See `docs/BACKEND_PHASES.md` for the full phase plan and statuses.
 
 ---
 
@@ -48,7 +50,6 @@ cd backend
 
 pip install -r requirements.txt
 
-# Entry point (once app/ is scaffolded):
 uvicorn app.main:app --reload   # http://localhost:8000
 ```
 
@@ -64,66 +65,83 @@ alembic upgrade head
 
 ### Frontend — Current State
 
-- **Entry**: `frontend/src/main.jsx` → `App.jsx` → `LandingPage.jsx`
-- `App.jsx` is a thin shell; add new page components here as routes are introduced.
-- Shadcn components live in `frontend/src/components/ui/` — generated, not hand-written. Edit them directly when customization is needed.
+```
+frontend/src/
+├── api/
+│   └── argus.js             # fetch wrappers for all FastAPI endpoints
+├── components/
+│   └── ui/                  # shadcn components (badge, button, card, …)
+├── hooks/
+│   ├── useChat.js           # chat state + POST /chat
+│   └── useMarketTicker.js   # polls GET /market/snapshot every 30 s
+├── pages/
+│   └── ChatPage.jsx         # full chat UI: ticker, nav, suggestions, messages, input
+├── LandingPage.jsx          # marketing landing page (complete)
+├── App.jsx                  # thin router shell
+└── lib/utils.js             # cn() helper (clsx + tailwind-merge)
+```
+
 - `@` alias → `frontend/src/` (set in `vite.config.js` and `jsconfig.json`).
-- `frontend/src/lib/utils.js` exports the `cn()` helper (clsx + tailwind-merge).
+- Shadcn components live in `frontend/src/components/ui/` — generated, not hand-written. Edit them directly when customization is needed.
+- Tailwind 4 with CSS variables for theming; tokens defined in `frontend/src/index.css`.
+- shadcn `components.json`: `style: "radix-nova"`, `baseColor: "neutral"`, `@` alias — keep consistent when adding components.
 
-**Components planned for Phase 1 (not yet built):**
+**Planned frontend additions:**
 
-| File | Purpose |
-|---|---|
-| `src/components/ChatWindow.jsx` | Main chat UI |
-| `src/components/MessageBubble.jsx` | Individual user / assistant message |
-| `src/components/SourceList.jsx` | Citation chips below each answer |
-| `src/components/MarketSnapshot.jsx` | Ticker strip with Recharts sparklines |
-| `src/components/MarketCard.jsx` | Single asset card (price + % change) |
-| `src/hooks/useChat.js` | Chat state + API calls |
-| `src/api/argus.js` | Axios wrappers for FastAPI endpoints |
+| File | Phase | Purpose |
+|---|---|---|
+| `src/hooks/useSuggestions.js` | 6 | Fetches dynamic prompt cards from `GET /suggestions`; falls back to static |
 
-### Backend — Planned Folder Structure
+### Backend — Current File Structure
 
 ```
 backend/
 ├── app/
-│   ├── main.py              # FastAPI entry point
-│   ├── config.py            # Settings, env vars (pydantic-settings)
+│   ├── main.py              # FastAPI entry point, CORS, lifespan hooks
+│   ├── config.py            # pydantic-settings reading .env
 │   ├── api/
+│   │   ├── __init__.py
+│   │   ├── health.py        # GET /health
 │   │   ├── chat.py          # POST /chat
-│   │   ├── market.py        # GET /market/snapshot
-│   │   └── health.py        # GET /health
-│   ├── agents/
-│   │   ├── graph.py         # LangGraph graph definition (wires all agents)
-│   │   ├── market_agent.py
-│   │   ├── news_agent.py
-│   │   ├── rag_agent.py
-│   │   └── reasoning_agent.py
-│   ├── tools/
-│   │   ├── market_tools.py  # yfinance wrappers
-│   │   ├── news_tools.py    # RSS + article fetch
-│   │   └── vector_tools.py  # Qdrant search
-│   ├── pipeline/
-│   │   ├── scheduler.py     # APScheduler (news refresh every 15 min)
-│   │   └── news_ingestion.py # fetch → parse → embed → store
+│   │   └── market.py        # GET /market/snapshot
 │   ├── db/
-│   │   ├── models.py        # SQLAlchemy models
-│   │   ├── session.py       # DB session factory
-│   │   └── crud.py
-│   ├── rag/
-│   │   ├── embedder.py      # sentence-transformers (all-MiniLM-L6-v2)
-│   │   ├── chunker.py       # tiktoken chunking (512 tokens, 50 overlap)
-│   │   └── retriever.py     # Qdrant search (top-k = 5)
-│   └── llm/
-│       ├── provider.py      # Gemini / OpenRouter switcher via LLM_PROVIDER env var
-│       └── prompts.py       # All prompt templates
+│   │   ├── __init__.py
+│   │   ├── models.py        # Article, Conversation, Message (SQLAlchemy)
+│   │   ├── session.py       # get_db FastAPI dependency
+│   │   └── crud.py          # insert/query helpers
+│   ├── llm/
+│   │   ├── __init__.py
+│   │   ├── provider.py      # get_llm() — Gemini | OpenRouter switcher
+│   │   └── prompts.py       # prompt templates
+│   └── tools/
+│       ├── __init__.py
+│       └── market_tools.py  # fetch_snapshot() — intraday yfinance (1 m bars)
 ├── alembic/
 ├── alembic.ini
 ├── requirements.txt
 └── .env.example
 ```
 
-### LangGraph Agent Pipeline
+**Planned backend additions (Phases 5–9):**
+
+| File | Phase | Purpose |
+|---|---|---|
+| `app/tools/news_tools.py` | 5 | RSS feed parser + article HTML fetch |
+| `app/pipeline/news_ingestion.py` | 5 | fetch → deduplicate by URL → store to `articles` |
+| `app/pipeline/scheduler.py` | 5 | APScheduler wired into FastAPI lifespan (15-min refresh) |
+| `app/agents/news_agent.py` | 5 | News agent stub |
+| `app/api/suggestions.py` | 6 | GET /suggestions — 4 dynamic prompt cards, 15-min TTL cache |
+| `app/llm/suggestions.py` | 6 | Prompt builder + OpenRouter call + Pydantic validation |
+| `app/rag/embedder.py` | 7 | sentence-transformers batch embed |
+| `app/rag/chunker.py` | 7 | tiktoken chunking (512 tokens, 50 overlap) |
+| `app/rag/retriever.py` | 7 | Qdrant top-k search |
+| `app/tools/vector_tools.py` | 7 | Search wrapper for agents |
+| `app/agents/rag_agent.py` | 7 | RAG agent stub |
+| `app/agents/graph.py` | 8 | LangGraph graph definition |
+| `app/agents/market_agent.py` | 8 | Market agent |
+| `app/agents/reasoning_agent.py` | 8 | LLM synthesis with citations |
+
+### LangGraph Agent Pipeline (Phase 8 target)
 
 ```
 POST /chat
@@ -131,7 +149,7 @@ POST /chat
     ▼
 LangGraph Orchestrator (graph.py)
     │
-    ├──▶ Market Agent    — yfinance: SPY, QQQ, DJI, VIX, GC=F, SI=F, CL=F, BTC-USD, ETH-USD
+    ├──▶ Market Agent    — yfinance intraday snapshot
     ├──▶ News Agent      — RSS: Reuters, CNBC, MarketWatch, Yahoo Finance
     ├──▶ RAG Agent       — Qdrant semantic search, collection: "argus_articles"
     └──▶ Reasoning Agent — LLM → cited explanation
@@ -151,7 +169,7 @@ def get_llm():
         return ChatGoogleGenerativeAI(model="gemini-2.5-flash")
     elif provider == "openrouter":
         return ChatOpenAI(
-            model="meta-llama/llama-3.3-70b-instruct:free",
+            model="nvidia/nemotron-3-super-120b-a12b:free",
             base_url="https://openrouter.ai/api/v1",
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
@@ -173,7 +191,14 @@ def get_llm():
 }
 ```
 
-**GET /market/snapshot** — returns prices + `change_pct` for all tracked assets.
+**GET /market/snapshot** — returns intraday prices + `change_pct` for all tracked assets.
+
+Tracked assets: `SPY`, `QQQ`, `NVDA`, `MSFT`, `AAPL`, `META`, `INTC`, `VIX`, `BTC`, `GC=F`, `ETH`, `DJI`, `CL=F`
+
+**GET /suggestions** *(Phase 6)* — returns 4 LLM-generated prompt cards:
+```json
+[{ "icon": "TrendingDown", "title": "...", "desc": "..." }]
+```
 
 **GET /health** — `{ "status": "ok", "llm_provider": "gemini" }`
 
@@ -192,7 +217,7 @@ def get_llm():
 ```bash
 LLM_PROVIDER=gemini              # gemini | openrouter
 GOOGLE_API_KEY=...
-OPENROUTER_API_KEY=...           # fallback when Gemini daily cap hits
+OPENROUTER_API_KEY=...           # fallback when Gemini daily cap hits; also used for /suggestions
 
 DATABASE_URL=postgresql://...    # Supabase free tier
 QDRANT_URL=https://...qdrant.io  # Qdrant Cloud free tier
@@ -207,6 +232,7 @@ ENVIRONMENT=development          # development | production
 
 - No auth, no streaming responses, no Redis cache — all deferred to v2.
 - News refresh runs every 15 min via APScheduler inside the FastAPI process (no Celery/Redis needed).
+- Market ticker uses intraday yfinance data: `period="1d", interval="1m"`, comparing the last two 1-minute bars for `change_pct`.
 - Embeddings run on the server — all-MiniLM-L6-v2 (~80 MB) is small enough; no separate embedding service.
 - Qdrant collection name: `argus_articles`. Chunk size: 512 tokens, 50-token overlap. Top-k retrieval: 5 articles.
 - Deploy targets: Vercel (frontend), Render free tier (backend — sleeps after 15 min inactivity, ~30s cold start is acceptable), Supabase free tier (PostgreSQL), Qdrant Cloud free tier.

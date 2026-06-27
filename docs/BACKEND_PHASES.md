@@ -76,7 +76,64 @@ Status key: `pending` | `in-progress` | `done`
 
 ---
 
-## Phase 6 — RAG (Qdrant) `pending`
+## Phase 6 — Dynamic Prompt Suggestions `pending`
+
+**Goal:** Replace the four static prompt cards in the chat UI with four LLM-generated questions that reflect today's market moves and top news headlines. The LLM also picks a relevant icon for each question from a fixed allowlist so the UI stays consistent.
+
+**Trigger:** Runs once per session on frontend load (after Phase 5 news is in DB). Results are cached server-side for 15 minutes so repeated page loads don't burn API quota.
+
+**Data inputs fed to the LLM:**
+- Live market snapshot from `fetch_snapshot()` (top movers by `|change_pct|`)
+- Top 8 article titles from the `articles` table ordered by `published_at DESC`
+
+**Icon allowlist** (Lucide icon names the LLM may return — frontend maps name → component):
+
+| Name | When to use |
+|---|---|
+| `TrendingUp` | Bullish move, rally, breakout |
+| `TrendingDown` | Selloff, decline, bearish signal |
+| `BarChart2` | General market snapshot or comparison |
+| `Activity` | Volatility, intraday swings |
+| `Landmark` | Central bank, Fed, rate decision |
+| `Globe` | Global / macro / geopolitical |
+| `CalendarDays` | Earnings calendar, scheduled events |
+| `Newspaper` | Breaking news, press release |
+| `Zap` | Fast-moving story, surprise event |
+| `AlertTriangle` | Risk, warning, potential downside |
+| `DollarSign` | Currency, USD pairs, forex |
+| `Bitcoin` | Crypto assets (BTC, ETH) |
+| `Flame` | Hot sector, momentum play |
+| `Sparkles` | AI / tech theme, general insight |
+
+**LLM response schema** (strict JSON, validated with Pydantic):
+```json
+[
+  {
+    "icon": "TrendingDown",
+    "title": "Why is NVDA selling off today?",
+    "desc": "Technicals, news catalysts, and sector rotation."
+  }
+]
+```
+
+**Files to create:**
+- `app/api/suggestions.py` — `GET /suggestions` endpoint; returns 4 `{ icon, title, desc }` objects; 15-min in-process TTL cache
+- `app/llm/suggestions.py` — builds prompt from market snapshot + headlines, calls OpenRouter api, parses and validates JSON response
+
+**Files to update:**
+- `app/api/__init__.py` — register `suggestions` router
+- `app/main.py` — `include_router(suggestions.router)`
+
+**Frontend changes (same phase):**
+- `src/api/argus.js` — add `fetchSuggestions()` wrapper for `GET /suggestions`
+- `src/hooks/useSuggestions.js` — fetches on mount, falls back to static suggestions on error
+- `src/pages/ChatPage.jsx` — `PromptSuggestions` reads from hook; icon name mapped to Lucide component via a `ICON_MAP` const; static `SUGGESTIONS` array kept as fallback
+
+**Milestone:** On page load the four prompt cards show questions derived from today's actual market data and news. Each card displays an LLM-selected icon from the allowlist. A network failure gracefully falls back to the static cards.
+
+---
+
+## Phase 7 — RAG (Qdrant) `pending`
 
 **Goal:** Embed unprocessed articles and store in Qdrant. Retriever for semantic search at query time.
 
@@ -93,7 +150,7 @@ Status key: `pending` | `in-progress` | `done`
 
 ---
 
-## Phase 7 — LangGraph Orchestration `pending`
+## Phase 8 — LangGraph Orchestration `pending`
 
 **Goal:** Wire all agents into a LangGraph graph. `/chat` runs the full pipeline and returns cited sources.
 
@@ -121,7 +178,7 @@ LangGraph Orchestrator (graph.py)
 
 ---
 
-## Phase 8 — Conversation Persistence `pending`
+## Phase 9 — Conversation Persistence `pending`
 
 **Goal:** Persist all messages to DB. Support multi-turn context via `conversation_id`.
 

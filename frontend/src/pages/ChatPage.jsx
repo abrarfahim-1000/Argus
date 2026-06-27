@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { useMarketTicker } from '@/hooks/useMarketTicker'
 import Markdown from 'react-markdown'
 import {
   Eye, Sun, Moon, Search, ArrowUp,
@@ -12,21 +13,10 @@ import { cn } from '@/lib/utils'
 
 // ─── Market Ticker ────────────────────────────────────────────────────────────
 
-const TICKER_ITEMS = [
-  { symbol: 'SPY',  price: '512.40', change: '-1.2%',  up: false },
-  { symbol: 'QQQ',  price: '430.18', change: '-2.0%',  up: false },
-  { symbol: 'VIX',  price: '18.5',   change: '+12.4%', up: true  },
-  { symbol: 'BTC',  price: '67,240', change: '+1.8%',  up: true  },
-  { symbol: 'GC=F', price: '2,341',  change: '+0.4%',  up: true  },
-  { symbol: 'ETH',  price: '3,420',  change: '+0.9%',  up: true  },
-  { symbol: 'DJI',  price: '38,992', change: '-0.7%',  up: false },
-  { symbol: 'CL=F', price: '82.14',  change: '+1.1%',  up: true  },
-]
-
-function TickerRow() {
+function TickerRow({ items }) {
   return (
     <div className="flex items-center">
-      {TICKER_ITEMS.map((item, i) => (
+      {items.map((item, i) => (
         <div key={i} className="flex items-center">
           <div className="flex items-center gap-1.5 px-4">
             <span className="font-mono text-[11px] text-muted-foreground">{item.symbol}</span>
@@ -46,23 +36,36 @@ function TickerRow() {
 }
 
 function MarketTicker() {
+  const { items } = useMarketTicker()
+  if (!items.length) return null
+
   return (
     <div
       className="relative overflow-hidden border-b border-border bg-background/60 backdrop-blur-md ticker-container"
       aria-label="Live market ticker"
     >
       <div className="ticker-track flex w-max py-2" aria-hidden="true">
-        <TickerRow />
-        <TickerRow />
+        <TickerRow items={items} />
+        <TickerRow items={items} />
+        <TickerRow items={items} />
+        <TickerRow items={items} />
       </div>
       <div className="absolute right-0 top-0 bottom-0 flex items-center pr-3 pl-12 bg-gradient-to-l from-background via-background/80 to-transparent z-10 pointer-events-none">
-        <Badge
-          variant="outline"
-          className="font-mono text-[9px] tracking-widest border-[var(--argus)]/40 text-[var(--argus)] bg-[var(--argus)]/5 gap-1.5 h-auto py-0.5 px-2 pointer-events-auto"
+        <a
+          href="https://finance.yahoo.com/markets/stocks/most-active/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pointer-events-auto"
+          aria-label="View most active stocks on Yahoo Finance"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--argus)] animate-pulse shrink-0" aria-hidden="true" />
-          LIVE
-        </Badge>
+          <Badge
+            variant="outline"
+            className="font-mono text-[9px] tracking-widest border-[var(--argus)]/40 text-[var(--argus)] bg-[var(--argus)]/5 gap-1.5 h-auto py-0.5 px-2 cursor-pointer hover:bg-[var(--argus)]/10 hover:border-[var(--argus)]/60 transition-colors"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--argus)] animate-pulse shrink-0" aria-hidden="true" />
+            LIVE
+          </Badge>
+        </a>
       </div>
     </div>
   )
@@ -336,7 +339,7 @@ export default function ChatPage({ isDark, onToggle, onBack }) {
           100% { transform: translateX(-50%); }
         }
         .ticker-track {
-          animation: tickerScroll 45s linear infinite;
+          animation: tickerScroll 73s linear infinite;
         }
         .ticker-container:hover .ticker-track {
           animation-play-state: paused;
