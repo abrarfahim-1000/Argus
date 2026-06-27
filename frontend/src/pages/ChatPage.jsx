@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import Markdown from 'react-markdown'
 import {
   Eye, Sun, Moon, Search, ArrowUp,
   TrendingDown, TrendingUp, CalendarDays, Landmark,
@@ -196,8 +197,8 @@ function AssistantBubble({ content, sources = [] }) {
         <Sparkles className="w-4 h-4 text-[var(--argus)]" aria-hidden="true" />
       </div>
       <div className="max-w-[85%] flex flex-col gap-2.5">
-        <div className="glass-ai text-sm text-foreground px-4 py-3.5 rounded-2xl rounded-tl-sm leading-relaxed">
-          {content}
+        <div className="glass-ai prose prose-sm dark:prose-invert max-w-none text-sm text-foreground px-4 py-3.5 rounded-2xl rounded-tl-sm leading-relaxed">
+          <Markdown>{content}</Markdown>
         </div>
         {sources.length > 0 && (
           <div className="flex flex-wrap gap-2">
