@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react'
 import { fetchMarketSnapshot } from '@/api/argus'
 
-const DISPLAY_ORDER = ['SPY', 'QQQ', 'NVDA', 'MSFT', 'AAPL', 'META', 'INTC', 'VIX', 'BTC', 'GC=F', 'ETH', 'DJI', 'CL=F']
+const DISPLAY_ORDER = [
+  'SPY', 'QQQ', 'DJI', 'IWM',
+  'VIX', 'TLT',
+  'NVDA', 'MSFT', 'AAPL', 'META', 'GOOGL', 'AMZN', 'TSLA',
+  'JPM', 'INTC',
+  'BTC', 'ETH',
+  'GC=F', 'SI=F', 'CL=F',
+  'DXY',
+]
 
 function formatPrice(symbol, price) {
   if (['BTC', 'ETH'].includes(symbol)) return price.toLocaleString('en-US', { maximumFractionDigits: 0 })

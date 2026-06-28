@@ -1,19 +1,34 @@
 import yfinance as yf
 
 TICKERS: dict[str, str] = {
-    "SPY":  "SPY",
-    "QQQ":  "QQQ",
-    "NVDA": "NVDA",
-    "MSFT": "MSFT",
-    "AAPL": "AAPL",
-    "META": "META",
-    "INTC": "INTC",
-    "VIX":  "^VIX",
-    "BTC":  "BTC-USD",
-    "GC=F": "GC=F",
-    "ETH":  "ETH-USD",
-    "DJI":  "^DJI",
-    "CL=F": "CL=F",
+    # Broad market indices
+    "SPY":   "SPY",       # S&P 500
+    "QQQ":   "QQQ",       # Nasdaq 100
+    "DJI":   "^DJI",      # Dow Jones
+    "IWM":   "IWM",       # Russell 2000 small-cap
+    # Volatility & bonds
+    "VIX":   "^VIX",      # Fear index
+    "TLT":   "TLT",       # 20Y Treasury ETF (rate proxy)
+    # Mega-cap tech
+    "NVDA":  "NVDA",
+    "MSFT":  "MSFT",
+    "AAPL":  "AAPL",
+    "META":  "META",
+    "GOOGL": "GOOGL",
+    "AMZN":  "AMZN",
+    "TSLA":  "TSLA",
+    # Financials / industrial movers
+    "JPM":   "JPM",
+    "INTC":  "INTC",
+    # Crypto
+    "BTC":   "BTC-USD",
+    "ETH":   "ETH-USD",
+    # Commodities
+    "GC=F":  "GC=F",      # Gold
+    "SI=F":  "SI=F",      # Silver
+    "CL=F":  "CL=F",      # Crude oil
+    # USD strength
+    "DXY":   "DX-Y.NYB",  # Dollar index
 }
 
 
