@@ -1,18 +1,10 @@
 import { useState, useEffect } from 'react'
 import { fetchMarketSnapshot } from '@/api/argus'
 
-const DISPLAY_ORDER = [
-  'SPY', 'QQQ', 'DJI', 'IWM',
-  'VIX', 'TLT',
-  'NVDA', 'MSFT', 'AAPL', 'META', 'GOOGL', 'AMZN', 'TSLA',
-  'JPM', 'INTC',
-  'BTC', 'ETH',
-  'GC=F', 'SI=F', 'CL=F',
-  'DXY',
-]
+const DISPLAY_ORDER = ['S&P 500','Nasdaq-100','Dow Jones','Russell','Fear Gauge','Treasuries','Nvidia','Microsoft','Apple','Meta','Google','Amazon','Tesla','SpaceX','JPMorgan','Intel','Bitcoin','Ethereum','Gold','Silver','WTI Crude','Brent Crude','USD']
 
 function formatPrice(symbol, price) {
-  if (['BTC', 'ETH'].includes(symbol)) return price.toLocaleString('en-US', { maximumFractionDigits: 0 })
+  if (['Bitcoin', 'Ethereum'].includes(symbol)) return price.toLocaleString('en-US', { maximumFractionDigits: 0 })
   if (price > 1000) return price.toLocaleString('en-US', { maximumFractionDigits: 0 })
   return price.toFixed(2)
 }

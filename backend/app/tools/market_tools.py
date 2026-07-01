@@ -1,36 +1,30 @@
 import yfinance as yf
 
 TICKERS: dict[str, str] = {
-    # Broad market indices
-    "SPY":   "SPY",       # S&P 500
-    "QQQ":   "QQQ",       # Nasdaq 100
-    "DJI":   "^DJI",      # Dow Jones
-    "IWM":   "IWM",       # Russell 2000 small-cap
-    # Volatility & bonds
-    "VIX":   "^VIX",      # Fear index
-    "TLT":   "TLT",       # 20Y Treasury ETF (rate proxy)
-    # Mega-cap tech
-    "NVDA":  "NVDA",
-    "MSFT":  "MSFT",
-    "AAPL":  "AAPL",
-    "META":  "META",
-    "GOOGL": "GOOGL",
-    "AMZN":  "AMZN",
-    "TSLA":  "TSLA",
-    # Financials / industrial movers
-    "JPM":   "JPM",
-    "INTC":  "INTC",
-    # Crypto
-    "BTC":   "BTC-USD",
-    "ETH":   "ETH-USD",
-    # Commodities
-    "GC=F":  "GC=F",      # Gold
-    "SI=F":  "SI=F",      # Silver
-    "CL=F":  "CL=F",      # Crude oil
-    # USD strength
-    "DXY":   "DX-Y.NYB",  # Dollar index
+    "SPY":      "SPY",
+    "Nasdaq-100":      "QQQ",
+    "Dow Jones":"^DJI",
+    "Russell":  "IWM",
+    "Fear Gauge":      "^VIX",
+    "Treasuries":"TLT",
+    "Nvidia":   "NVDA",
+    "Microsoft":"MSFT",
+    "Apple":    "AAPL",
+    "Meta":     "META",
+    "Google":   "GOOGL",
+    "Amazon":   "AMZN",
+    "Tesla":    "TSLA",
+    "SpaceX":   "SPCX",
+    "JPMorgan": "JPM",
+    "Intel":    "INTC",
+    "Bitcoin":  "BTC-USD",
+    "Ethereum": "ETH-USD",
+    "Gold":     "GC=F",
+    "Silver":   "SI=F",
+    "WTI Crude":      "CL=F",
+    "Brent Crude": "BZ=F",
+    "USD":      "DX-Y.NYB",
 }
-
 
 def fetch_snapshot() -> dict[str, dict]:
     data = yf.download(
