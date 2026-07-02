@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Eye, ArrowRight, Sun, Moon,
   Activity, Rss, Brain, Link2
@@ -121,7 +122,8 @@ function useInView(threshold = 0.4) {
 
 // ─── Navbar ──────────────────────────────────────────────────────────────────
 
-function Navbar({ isDark, onToggle, onLaunch }) {
+function Navbar({ isDark, onToggle }) {
+  const navigate = useNavigate()
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-5 md:px-10">
       <div className="flex items-center gap-2 font-semibold text-base tracking-[0.25em] uppercase text-foreground select-none">
@@ -141,7 +143,7 @@ function Navbar({ isDark, onToggle, onLaunch }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={onLaunch}
+          onClick={() => navigate('/chat')}
           className="rounded-full text-xs tracking-widest uppercase"
         >
           Launch App
@@ -384,7 +386,8 @@ function AudienceSection({ id }) {
 
 // ─── Footer / CTA ─────────────────────────────────────────────────────────────
 
-function FooterSection({ id, onLaunch }) {
+function FooterSection({ id }) {
+  const navigate = useNavigate()
   const [ref, visible] = useInView(0.5)
 
   return (
@@ -405,7 +408,7 @@ function FooterSection({ id, onLaunch }) {
 
         <Button
           size="lg"
-          onClick={onLaunch}
+          onClick={() => navigate('/chat')}
           className="rounded-sm gap-2 font-semibold tracking-wide px-8 h-12 group"
           style={{ background: 'var(--argus)', color: 'oklch(0.145 0 0)' }}
         >
@@ -451,7 +454,7 @@ function FooterSection({ id, onLaunch }) {
 
 const SECTIONS = ['hero', 'feature-1', 'feature-2', 'feature-3', 'feature-4', 'audience', 'footer']
 
-export default function LandingPage({ isDark, onToggle, onLaunch }) {
+export default function LandingPage({ isDark, onToggle }) {
   const containerRef = useRef(null)
   const [activeSection, setActiveSection] = useState(0)
 
@@ -502,7 +505,7 @@ export default function LandingPage({ isDark, onToggle, onLaunch }) {
       `}</style>
 
       <BackgroundCanvas isDark={isDark} />
-      <Navbar isDark={isDark} onToggle={onToggle} onLaunch={onLaunch} />
+      <Navbar isDark={isDark} onToggle={onToggle} />
 
       {/* Dot navigation */}
       <div
@@ -530,7 +533,7 @@ export default function LandingPage({ isDark, onToggle, onLaunch }) {
           <FeatureSection key={f.id} {...f} />
         ))}
         <AudienceSection id={SECTIONS[5]} />
-        <FooterSection id={SECTIONS[6]} onLaunch={onLaunch} />
+        <FooterSection id={SECTIONS[6]} />
       </main>
     </div>
   )

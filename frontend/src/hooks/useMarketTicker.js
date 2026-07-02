@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { fetchMarketSnapshot } from '@/api/argus'
 
-const DISPLAY_ORDER = ['S&P 500','Nasdaq-100','Dow Jones','Russell','Fear Gauge','Treasuries','Nvidia','Microsoft','Apple','Meta','Google','Amazon','Tesla','SpaceX','JPMorgan','Intel','Bitcoin','Ethereum','Gold','Silver','WTI Crude','Brent Crude','USD']
+const DISPLAY_ORDER = ['S&P 500','Nasdaq-100','Dow Jones','Russell','Fear Gauge','Treasuries','Nvidia','Microsoft','Apple','Meta','Google','Amazon','Tesla','SpaceX','JPMorgan','Intel','Bitcoin','Ethereum','Gold','Silver','WTI Crude','Brent Crude','USD','N225','FTSE','DAX']
 
 function formatPrice(symbol, price) {
   if (['Bitcoin', 'Ethereum'].includes(symbol)) return price.toLocaleString('en-US', { maximumFractionDigits: 0 })

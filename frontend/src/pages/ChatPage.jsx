@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMarketTicker } from '@/hooks/useMarketTicker'
 import { useSuggestions } from '@/hooks/useSuggestions'
 import Markdown from 'react-markdown'
@@ -83,21 +84,20 @@ function MarketTicker() {
 
 // ─── Chat Nav ─────────────────────────────────────────────────────────────────
 
-function ChatNav({ isDark, onToggle, onBack }) {
+function ChatNav({ isDark, onToggle }) {
+  const navigate = useNavigate()
   return (
     <nav className="flex items-center justify-between px-5 py-3 border-b border-border/50">
       <div className="flex items-center gap-2">
-        {onBack && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            aria-label="Back to home"
-            className="rounded-full w-8 h-8"
-          >
-            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate('/')}
+          aria-label="Back to home"
+          className="rounded-full w-8 h-8"
+        >
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+        </Button>
         <div className="flex items-center gap-1.5 font-semibold text-sm tracking-[0.25em] uppercase text-foreground select-none">
           <Eye className="w-4 h-4 text-[var(--argus)]" strokeWidth={2.5} aria-hidden="true" />
           <span>ARG<span className="text-[var(--argus)]">U</span>S</span>
@@ -330,7 +330,7 @@ function ChatInputBar({ value, onChange, onSubmit, isLoading }) {
 
 // ─── Root ──────────────────────────────────────────────────────────────────────
 
-export default function ChatPage({ isDark, onToggle, onBack }) {
+export default function ChatPage({ isDark, onToggle }) {
   const { messages, input, setInput, isLoading, sendMessage } = useChat()
   const hasMessages = messages.length > 0
 
@@ -438,7 +438,7 @@ export default function ChatPage({ isDark, onToggle, onBack }) {
       {/* Fixed header: ticker + nav */}
       <header className="relative flex-shrink-0 z-10">
         <MarketTicker />
-        <ChatNav isDark={isDark} onToggle={onToggle} onBack={onBack} />
+        <ChatNav isDark={isDark} onToggle={onToggle} />
       </header>
 
       {/* Scrollable body */}

@@ -13,9 +13,22 @@ The repo is a monorepo:
 | `frontend/` | React 19, Vite 8, Tailwind CSS 4, shadcn/ui (JSX, not TSX) |
 | `backend/` | Python / FastAPI, LangGraph, LangChain, SQLAlchemy + Alembic, Qdrant |
 
-**Current state:** Phases 1–6 are complete. The chat UI is live end-to-end: the backend serves `/health`, `/chat`, `/market/snapshot`, and `/suggestions`; the frontend polls market data every 30 s, renders the live ticker, and loads dynamic LLM-generated prompt cards on startup. News is ingested from four RSS feeds every 15 min via APScheduler. Next milestone is Phase 7: RAG pipeline (Qdrant embeddings).
+**Current state:** Phases 1–7 are complete. The chat UI is live end-to-end: the backend serves `/health`, `/chat`, `/market/snapshot`, and `/suggestions`; the frontend polls market data every 30 s, renders the live ticker, and loads dynamic LLM-generated prompt cards on startup. News is ingested from four RSS feeds every 15 min via APScheduler (Reuters and CNBC feeds are currently dead — see `docs/PHASE7_ISSUES.md`), with unembedded articles chunked, embedded (`BAAI/bge-small-en-v1.5`), and upserted into Qdrant (`argus_articles`) on every ingestion run. Next milestone is Phase 8: LangGraph orchestration wiring the RAG/market/news agents into `/chat`.
 
-See `docs/BACKEND_PHASES.md` for the full phase plan and statuses.
+See `docs/BACKEND_PHASES.md` for the full phase plan and statuses, and `docs/PHASE7_ISSUES.md` for issues hit building the RAG pipeline.
+
+---
+
+## GateGuard Fact-Forcing Gate
+
+This repo has a `pre:edit-write:gateguard-fact-force` / `pre:bash:gateguard-fact-force` hook active. Before the **first** `Edit`, `Write`, or `Bash` call in a session (and again whenever it fires), it blocks the call and requires these facts to be stated in the same turn, *before* retrying the identical tool call:
+
+1. The file(s)/line(s) that call or depend on the file being touched (or, for Bash, what the command verifies/produces).
+2. Confirmation that no existing file already serves the same purpose (cite a prior Glob/Grep/Read, or run one first).
+3. Field names/structure/date format if the change touches a data file (use synthetic values, not real data).
+4. The user's current instruction, quoted verbatim.
+
+**To avoid repeated blocks:** state these four facts proactively as plain text immediately before each `Edit`/`Write`/first `Bash` call — don't wait for the gate to reject the call first. Keep it to 1–4 short sentences; it does not need its own heading. This is a per-file, per-tool-type gate (it tracks "first Edit of file X", "first Write of file Y", "first Bash this session"), so later edits to a file already touched this session typically don't refire it.
 
 ---
 
@@ -116,27 +129,29 @@ backend/
 │   │   └── suggestions.py   # prompt builder + LLM call + Pydantic validation
 │   ├── pipeline/
 │   │   ├── __init__.py
-│   │   ├── news_ingestion.py  # fetch → deduplicate by URL → store to articles table
+│   │   ├── news_ingestion.py  # fetch → dedup by URL → store → chunk/embed/upsert to Qdrant
 │   │   └── scheduler.py       # APScheduler (15-min interval), wired into lifespan
+│   ├── rag/
+│   │   ├── __init__.py
+│   │   ├── chunker.py        # chunk_text() — tiktoken sliding window (512 tokens, 50 overlap)
+│   │   ├── embedder.py       # embed_texts() — SentenceTransformer("BAAI/bge-small-en-v1.5") singleton
+│   │   └── retriever.py      # ensure_collection() / upsert_chunks() / search() — Qdrant client
 │   └── tools/
 │       ├── __init__.py
 │       ├── market_tools.py  # fetch_snapshot() — intraday yfinance (1 m bars)
-│       └── news_tools.py    # parse_feeds() — RSS parser for 4 sources
+│       ├── news_tools.py    # parse_feeds() — RSS parser + HTML body fetch fallback for 4 sources
+│       └── vector_tools.py  # search_articles() — thin wrapper for Phase 8 RAG agent
 ├── alembic/
 ├── alembic.ini
 ├── requirements.txt
 └── .env.example
 ```
 
-**Planned backend additions (Phases 7–9):**
+**Planned backend additions (Phase 8–9):**
 
 | File | Phase | Purpose |
 |---|---|---|
-| `app/rag/embedder.py` | 7 | sentence-transformers batch embed |
-| `app/rag/chunker.py` | 7 | tiktoken chunking (512 tokens, 50 overlap) |
-| `app/rag/retriever.py` | 7 | Qdrant top-k search |
-| `app/tools/vector_tools.py` | 7 | Search wrapper for agents |
-| `app/agents/rag_agent.py` | 7 | RAG agent stub |
+| `app/agents/rag_agent.py` | 8 | RAG agent wrapping `vector_tools.search_articles()` |
 | `app/agents/graph.py` | 8 | LangGraph graph definition |
 | `app/agents/market_agent.py` | 8 | Market agent |
 | `app/agents/reasoning_agent.py` | 8 | LLM synthesis with citations |
@@ -233,7 +248,7 @@ ENVIRONMENT=development          # development | production
 - No auth, no streaming responses, no Redis cache — all deferred to v2.
 - News refresh runs every 15 min via APScheduler inside the FastAPI process (no Celery/Redis needed).
 - Market ticker uses intraday yfinance data: `period="1d", interval="1m"`, comparing the last two 1-minute bars for `change_pct`.
-- Embeddings run on the server — all-MiniLM-L6-v2 (~80 MB) is small enough; no separate embedding service.
+- Embeddings run on the server — BAAI/bge-small-en-v1.5 (384-dim, ~130 MB) is small enough; no separate embedding service.
 - Qdrant collection name: `argus_articles`. Chunk size: 512 tokens, 50-token overlap. Top-k retrieval: 5 articles.
 - Deploy targets: Vercel (frontend), Render free tier (backend — sleeps after 15 min inactivity, ~30s cold start is acceptable), Supabase free tier (PostgreSQL), Qdrant Cloud free tier.
 

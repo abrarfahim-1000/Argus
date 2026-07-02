@@ -1,7 +1,7 @@
 import yfinance as yf
 
 TICKERS: dict[str, str] = {
-    "SPY":      "SPY",
+    "S&P 500":      "SPY",
     "Nasdaq-100":      "QQQ",
     "Dow Jones":"^DJI",
     "Russell":  "IWM",
@@ -24,6 +24,9 @@ TICKERS: dict[str, str] = {
     "WTI Crude":      "CL=F",
     "Brent Crude": "BZ=F",
     "USD":      "DX-Y.NYB",
+    "N225":     "^N225",    # Nikkei 225 (Japan)
+    "FTSE":     "^FTSE",    # FTSE 100 (UK)
+    "DAX":      "^GDAXI",   # DAX (Germany / Eurozone proxy)
 }
 
 def fetch_snapshot() -> dict[str, dict]:

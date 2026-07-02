@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import chat, health, market, suggestions
 from app.pipeline import start_scheduler, stop_scheduler
+from app.rag.retriever import ensure_collection
 
 logging.basicConfig(
     level=logging.INFO,
@@ -15,6 +16,7 @@ logging.basicConfig(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    ensure_collection()
     start_scheduler()
     yield
     stop_scheduler()

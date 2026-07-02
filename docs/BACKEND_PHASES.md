@@ -133,11 +133,13 @@ Status key: `pending` | `in-progress` | `done`
 
 ---
 
-## Phase 7 — RAG (Qdrant) `pending`
+## Phase 7 — RAG (Qdrant) `done`
+
+**Issues hit during this phase (dead feeds, missing article content, scraped boilerplate) are logged in [`PHASE7_ISSUES.md`](./PHASE7_ISSUES.md).**
 
 **Goal:** Embed unprocessed articles and store in Qdrant. Retriever for semantic search at query time.
 
-**Config:** model `all-MiniLM-L6-v2`, chunk size 512 tokens / 50 overlap, top-k = 5, collection `argus_articles`
+**Config:** model `BAAI/bge-small-en-v1.5` (384-dim), chunk size 512 tokens / 50 overlap, top-k = 5, collection `argus_articles`
 
 **Files to create:**
 - `app/rag/embedder.py` — batch embed with sentence-transformers
