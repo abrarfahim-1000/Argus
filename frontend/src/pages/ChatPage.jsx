@@ -217,11 +217,11 @@ function AssistantBubble({ content, sources = [] }) {
                 key={i}
                 asChild
                 variant="outline"
-                className="font-mono text-[10px] gap-1 h-auto py-1 px-2.5 cursor-pointer hover:text-[var(--argus)] hover:border-[var(--argus)]/40 hover:bg-[var(--argus)]/5 hover:-translate-y-0.5 transition-all"
+                className="font-mono text-[10px] gap-1 h-auto py-1 px-2.5 min-w-0 max-w-[55vw] sm:max-w-[220px] cursor-pointer hover:text-[var(--argus)] hover:border-[var(--argus)]/40 hover:bg-[var(--argus)]/5 hover:-translate-y-0.5 transition-all"
               >
                 <a href={src.url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-2.5 h-2.5" aria-hidden="true" />
-                  {src.title}
+                  <ExternalLink className="w-2.5 h-2.5 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{src.title}</span>
                 </a>
               </Badge>
             ))}
