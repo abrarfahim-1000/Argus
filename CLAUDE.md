@@ -13,7 +13,7 @@ The repo is a monorepo:
 | `frontend/` | React 19, Vite 8, Tailwind CSS 4, shadcn/ui (JSX, not TSX) |
 | `backend/` | Python / FastAPI, LangGraph, LangChain, SQLAlchemy + Alembic, Qdrant |
 
-**Current state:** All 9 backend phases are complete. `/chat` runs a LangGraph pipeline — `market_agent`, `news_agent`, and `rag_agent` fan out concurrently from `START`, `history_agent` joins them with the conversation's prior turns, and all four converge on `reasoning_agent`, which calls the LLM and returns a cited answer. The backend serves `/health`, `/chat`, `/market/snapshot`, and `/suggestions`; the frontend polls market data every 30 s, renders the live ticker, and loads dynamic LLM-generated prompt cards on startup. News is ingested from RSS feeds every 15 min via APScheduler (some feeds are currently dead — see `docs/RAG_ISSUES.md`), with unembedded articles chunked, embedded (`BAAI/bge-small-en-v1.5`), and upserted into Qdrant (`argus_articles`) on every ingestion run. Conversations and messages persist to Postgres, so repeated `conversation_id`s produce coherent multi-turn context.
+**Current state:** All 9 backend phases are complete. `/chat` runs a LangGraph pipeline — `market_agent`, `news_agent`, and `rag_agent` fan out concurrently from `START`, `history_agent` joins them with the conversation's prior turns, and all four converge on `reasoning_agent`, which calls the LLM and returns a cited answer. The backend serves `/health`, `/chat`, `/market/snapshot`, and `/suggestions`; the frontend polls market data every 30 s, renders the live ticker, and loads dynamic LLM-generated prompt cards on startup. News is ingested from RSS feeds every 15 min via APScheduler (some feeds are currently dead — see `docs/RAG_ISSUES.md`), with unembedded articles chunked, embedded via a remote OpenRouter embeddings API call (`nvidia/llama-nemotron-embed-vl-1b-v2:free`, 384-dim), and upserted into Qdrant (`argus_articles`) on every ingestion run. Conversations and messages persist to Postgres, so repeated `conversation_id`s produce coherent multi-turn context.
 
 See `docs/BACKEND_PHASES.md` for the full phase plan and statuses, and `docs/RAG_ISSUES.md` for issues hit building the RAG pipeline.
 
@@ -143,7 +143,7 @@ backend/
 │   ├── rag/
 │   │   ├── __init__.py
 │   │   ├── chunker.py        # chunk_text() — tiktoken sliding window (512 tokens, 50 overlap)
-│   │   ├── embedder.py       # embed_texts() — SentenceTransformer("BAAI/bge-small-en-v1.5") singleton
+│   │   ├── embedder.py       # embed_texts() — remote OpenRouter embeddings call (OpenAIEmbeddings), no local model
 │   │   └── retriever.py      # ensure_collection() / upsert_chunks() / search() — Qdrant client
 │   └── tools/
 │       ├── __init__.py
@@ -253,7 +253,7 @@ ENVIRONMENT=development          # development | production
 - No auth, no streaming responses, no Redis cache — all deferred to v2.
 - News refresh runs every 15 min via APScheduler inside the FastAPI process (no Celery/Redis needed).
 - Market ticker uses intraday yfinance data: `period="1d", interval="1m"`, comparing the last two 1-minute bars for `change_pct`.
-- Embeddings run on the server — BAAI/bge-small-en-v1.5 (384-dim, ~130 MB) is small enough; no separate embedding service.
+- Embeddings run remotely via OpenRouter (`nvidia/llama-nemotron-embed-vl-1b-v2:free`, 384-dim) — no local model is loaded, so there's no torch/sentence-transformers dependency or memory cost on the server.
 - Qdrant collection name: `argus_articles`. Chunk size: 512 tokens, 50-token overlap. Top-k retrieval: 5 articles.
 - Deploy targets: Vercel (frontend), Render free tier (backend — sleeps after 15 min inactivity, ~30s cold start is acceptable), Supabase free tier (PostgreSQL), Qdrant Cloud free tier.
 

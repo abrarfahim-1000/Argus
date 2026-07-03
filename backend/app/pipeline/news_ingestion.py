@@ -53,27 +53,38 @@ def run_ingestion(db: Session) -> int:
     return inserted
 
 
+EMBED_BATCH_SIZE = 25
+
+
 def embed_pending_articles(db: Session) -> int:
-    pending = db.query(Article).filter(Article.embedded.is_(False)).all()
     embedded = 0
-    for article in pending:
-        if not article.content:
-            article.embedded = True
-            db.commit()
-            continue
-        try:
-            chunks = chunk_text(article.content)
-            upsert_chunks(
-                article_id=str(article.id),
-                title=article.title,
-                url=article.url,
-                source=article.source,
-                chunks=chunks,
-            )
-            article.embedded = True
-            db.commit()
-            embedded += 1
-        except Exception:
-            logger.exception("Failed to embed article %s", article.id)
-            db.rollback()
+    while True:
+        batch = (
+            db.query(Article)
+            .filter(Article.embedded.is_(False))
+            .limit(EMBED_BATCH_SIZE)
+            .all()
+        )
+        if not batch:
+            break
+        for article in batch:
+            if not article.content:
+                article.embedded = True
+                db.commit()
+                continue
+            try:
+                chunks = chunk_text(article.content)
+                upsert_chunks(
+                    article_id=str(article.id),
+                    title=article.title,
+                    url=article.url,
+                    source=article.source,
+                    chunks=chunks,
+                )
+                article.embedded = True
+                db.commit()
+                embedded += 1
+            except Exception:
+                logger.exception("Failed to embed article %s", article.id)
+                db.rollback()
     return embedded

@@ -1,33 +1,33 @@
 # Server
-fastapi
-uvicorn[standard]
-pydantic
-pydantic-settings
-python-dotenv
+fastapi==0.138.0
+uvicorn==0.49.0
+pydantic==2.13.4
+pydantic-settings==2.14.2
+python-dotenv==1.2.2
 
 # LLM + Agents
-langchain-core
-langchain-google-genai
-langchain-openai
-langgraph
+langchain-core==1.4.8
+langchain-google-genai==4.2.5
+langchain-openai==1.3.3
+langgraph==1.2.6
 
 
 # Market Data
-yfinance
-pandas
-pytz
+yfinance==1.4.1
+pandas==3.0.3
+pytz==2026.2
 
 # News Pipeline
-feedparser
-httpx
-beautifulsoup4
-apscheduler
+feedparser==6.0.12
+httpx==0.28.1
+beautifulsoup4==4.15.0
+apscheduler==3.11.2
 
 # RAG
-qdrant-client
-tiktoken
+qdrant-client==1.18.0
+tiktoken==0.13.0
 
 # Database
-sqlalchemy
-alembic
-psycopg2-binary
+sqlalchemy==2.0.51
+alembic==1.18.4
+psycopg2-binary==2.9.12
