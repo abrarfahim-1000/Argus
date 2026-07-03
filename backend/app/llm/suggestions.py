@@ -4,9 +4,10 @@ import logging
 from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
-from app.db.models import Article
-from app.llm.provider import get_llm
+from app.db import Article
 from app.tools import fetch_snapshot
+
+from .provider import get_llm
 
 logger = logging.getLogger(__name__)
 

@@ -21,6 +21,7 @@ const GithubIcon = ({ className }) => (
 )
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Toggle } from '@/components/ui/toggle'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -50,8 +51,8 @@ function BackgroundCanvas({ isDark }) {
     resize()
 
     const gridColor  = isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.04)'
-    const waveColor  = isDark ? 'rgba(0,212,255,0.07)'    : 'rgba(0,136,170,0.10)'
-    const spotInner  = isDark ? 'rgba(0,212,255,0.10)'    : 'rgba(0,136,170,0.05)'
+    const waveColor  = isDark ? 'rgba(156,176,128,0.07)'  : 'rgba(101,146,135,0.10)'
+    const spotInner  = isDark ? 'rgba(156,176,128,0.10)'  : 'rgba(101,146,135,0.05)'
     const spotOuter  = 'rgba(0,0,0,0)'
 
     const render = () => {
@@ -131,20 +132,20 @@ function Navbar({ isDark, onToggle }) {
         <span>ARG<span className="text-[var(--argus)]">U</span>S</span>
       </div>
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onToggle}
+        <Toggle
+          pressed={isDark}
+          onPressedChange={onToggle}
           aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          className="rounded-full border border-border"
+          className="relative w-7 h-7 px-0 rounded-full border border-border hover:-translate-y-0.5 data-[state=on]:bg-transparent"
         >
-          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </Button>
+          <Sun className="w-4 h-4 scale-100 rotate-0 transition-all duration-300 dark:scale-0 dark:-rotate-90" aria-hidden="true" />
+          <Moon className="absolute w-4 h-4 scale-0 rotate-90 transition-all duration-300 dark:scale-100 dark:rotate-0" aria-hidden="true" />
+        </Toggle>
         <Button
           variant="outline"
           size="sm"
           onClick={() => navigate('/chat')}
-          className="rounded-full text-xs tracking-widest uppercase"
+          className="rounded-full text-xs tracking-widest uppercase hover:-translate-y-0.5"
         >
           Launch App
         </Button>
@@ -220,15 +221,15 @@ const FEATURES = [
     Icon: Activity,
     heading: 'Real-time market data.',
     text: 'Live prices for indices, crypto, commodities — always current. We map the landscape the second you ask.',
-    source: 'LIVE: SPY, QQQ, BTC-USD',
+    source: 'LIVE: 26 TRACKED ASSETS',
     reversed: false,
   },
   {
     id: 'feature-2',
     Icon: Rss,
     heading: 'News, retrieved and ranked.',
-    text: 'RSS feeds from Reuters, CNBC, MarketWatch parsed every 15 minutes. Signal extraction, zero noise.',
-    source: 'PIPELINE: 4 SOURCES',
+    text: 'RSS feeds from Yahoo Finance, Investing.com, CoinDesk, Google News, the Fed, ECB, and more — parsed every 15 minutes. Signal extraction, zero noise.',
+    source: 'PIPELINE: 11 SOURCES',
     reversed: true,
   },
   {
@@ -236,7 +237,6 @@ const FEATURES = [
     Icon: Brain,
     heading: 'RAG-powered answers.',
     text: 'Semantically relevant context retrieved before every response. Our agents actually read the news before they speak.',
-    source: 'EMBEDDINGS: all-MiniLM-L6-v2',
     reversed: false,
   },
   {
@@ -345,17 +345,17 @@ function AudienceSection({ id }) {
       ref={ref}
       className="snap-section relative flex flex-col items-center justify-center px-8 md:px-24 z-10"
     >
-      <div className="w-full max-w-6xl">
+      <div className="w-full max-w-6xl py-8 md:py-0">
         <h2
           className={cn(
-            'font-bold text-3xl md:text-5xl mb-16 text-center text-foreground transition-all duration-700',
+            'font-bold text-2xl sm:text-3xl md:text-5xl mb-6 sm:mb-8 md:mb-16 text-center text-foreground transition-all duration-700',
             visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           )}
         >
           Who it&apos;s for
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5">
           {AUDIENCES.map((a, i) => (
             <Card
               key={a.label}
@@ -409,19 +409,19 @@ function FooterSection({ id }) {
         <Button
           size="lg"
           onClick={() => navigate('/chat')}
-          className="rounded-sm gap-2 font-semibold tracking-wide px-8 h-12 group"
-          style={{ background: 'var(--argus)', color: 'oklch(0.145 0 0)' }}
+          className="rounded-sm gap-2 font-semibold tracking-wide px-8 h-12 group hover:-translate-y-0.5"
+          style={{ background: 'var(--argus)', color: 'var(--primary-foreground)' }}
         >
           Launch Platform
           <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
         </Button>
 
         <div className="mt-20 flex flex-col items-center gap-4">
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-1">
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full"
+              className="rounded-full hover:-translate-y-0.5"
               aria-label="LinkedIn"
               asChild
             >
@@ -432,7 +432,7 @@ function FooterSection({ id }) {
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full"
+              className="rounded-full hover:-translate-y-0.5"
               aria-label="GitHub"
               asChild
             >
@@ -475,8 +475,8 @@ export default function LandingPage({ isDark, onToggle }) {
   return (
     <div className="bg-background h-screen w-screen overflow-hidden text-foreground selection:bg-[var(--argus)]/30">
       <style>{`
-        :root { --argus: #0088aa; }
-        .dark { --argus: #00d4ff; }
+        :root { --argus: #659287; }
+        .dark { --argus: #9CB080; }
 
         .snap-section {
           scroll-snap-align: start;
@@ -484,6 +484,7 @@ export default function LandingPage({ isDark, onToggle }) {
           height: 100vh;
           width: 100%;
           position: relative;
+          overflow-y: auto;
         }
         .snap-container {
           overflow-y: auto;

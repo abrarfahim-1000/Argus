@@ -3,8 +3,9 @@ from datetime import datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from app.db.session import SessionLocal
-from app.pipeline.news_ingestion import run_ingestion
+from app.db import SessionLocal
+
+from .news_ingestion import run_ingestion
 
 logger = logging.getLogger(__name__)
 

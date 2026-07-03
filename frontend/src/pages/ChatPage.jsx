@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Toggle } from '@/components/ui/toggle'
 import { useChat } from '@/hooks/useChat'
 import { cn } from '@/lib/utils'
 
@@ -62,21 +63,21 @@ function MarketTicker() {
         <TickerRow items={items} />
       </div>
       <div className="absolute right-0 top-0 bottom-0 flex items-center pr-3 pl-12 bg-gradient-to-l from-background via-background/80 to-transparent z-10 pointer-events-none">
-        <a
-          href="https://finance.yahoo.com/markets/stocks/most-active/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="pointer-events-auto"
-          aria-label="View most active stocks on Yahoo Finance"
+        <Badge
+          asChild
+          variant="outline"
+          className="pointer-events-auto font-mono text-[9px] tracking-widest border-[var(--argus)]/40 text-[var(--argus)] bg-[var(--argus)]/5 gap-1.5 h-auto py-0.5 px-2 cursor-pointer hover:bg-[var(--argus)]/10 hover:border-[var(--argus)]/60 hover:-translate-y-0.5 transition-all"
         >
-          <Badge
-            variant="outline"
-            className="font-mono text-[9px] tracking-widest border-[var(--argus)]/40 text-[var(--argus)] bg-[var(--argus)]/5 gap-1.5 h-auto py-0.5 px-2 cursor-pointer hover:bg-[var(--argus)]/10 hover:border-[var(--argus)]/60 transition-colors"
+          <a
+            href="https://finance.yahoo.com/markets/stocks/most-active/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View most active stocks on Yahoo Finance"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--argus)] animate-pulse shrink-0" aria-hidden="true" />
             LIVE
-          </Badge>
-        </a>
+          </a>
+        </Badge>
       </div>
     </div>
   )
@@ -94,7 +95,7 @@ function ChatNav({ isDark, onToggle }) {
           size="icon"
           onClick={() => navigate('/')}
           aria-label="Back to home"
-          className="rounded-full w-8 h-8"
+          className="rounded-full w-8 h-8 hover:-translate-y-0.5"
         >
           <ArrowLeft className="w-4 h-4" aria-hidden="true" />
         </Button>
@@ -103,18 +104,15 @@ function ChatNav({ isDark, onToggle }) {
           <span>ARG<span className="text-[var(--argus)]">U</span>S</span>
         </div>
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onToggle}
+      <Toggle
+        pressed={isDark}
+        onPressedChange={onToggle}
         aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        className="rounded-full w-8 h-8 border border-border"
+        className="relative w-8 h-8 px-0 rounded-full border border-border hover:-translate-y-0.5 data-[state=on]:bg-transparent"
       >
-        {isDark
-          ? <Sun className="w-4 h-4" aria-hidden="true" />
-          : <Moon className="w-4 h-4" aria-hidden="true" />
-        }
-      </Button>
+        <Sun className="w-4 h-4 scale-100 rotate-0 transition-all duration-300 dark:scale-0 dark:-rotate-90" aria-hidden="true" />
+        <Moon className="absolute w-4 h-4 scale-0 rotate-90 transition-all duration-300 dark:scale-100 dark:rotate-0" aria-hidden="true" />
+      </Toggle>
     </nav>
   )
 }
@@ -135,7 +133,7 @@ function HeroHeader({ collapsed }) {
       </p>
       <h1 className="text-2xl md:text-4xl font-semibold text-foreground tracking-tight">
         Ask anything about the{' '}
-        <span className="italic text-transparent bg-clip-text bg-gradient-to-r from-[var(--argus)] to-sky-300 pr-0.5">
+        <span className="italic text-transparent bg-clip-text bg-gradient-to-r from-[var(--argus)] to-[#B1D3B9] pr-0.5">
           market
         </span>
       </h1>
@@ -145,8 +143,8 @@ function HeroHeader({ collapsed }) {
 
 // ─── Prompt Suggestions ───────────────────────────────────────────────────────
 
-function PromptSuggestions({ onSelect }) {
-  const { suggestions } = useSuggestions()
+function PromptSuggestions({ suggestions, onSelect }) {
+  if (suggestions.length === 0) return null
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
@@ -155,15 +153,16 @@ function PromptSuggestions({ onSelect }) {
         return (
           <button
             key={i}
-            onClick={() => onSelect(title)}
+            onClick={e => {
+              e.currentTarget.blur()
+              onSelect(title)
+            }}
             className={cn(
               'text-left p-5 rounded-2xl border group cursor-pointer',
               'bg-white/50 dark:bg-white/[0.04] backdrop-blur-xl',
               'border-black/[0.08] dark:border-white/[0.08]',
               'hover:bg-[var(--argus)]/[0.08] hover:border-[var(--argus)]/40',
               'hover:-translate-y-1.5',
-              'hover:shadow-[0_12px_32px_-8px_rgba(0,136,170,0.18)]',
-              'dark:hover:shadow-[0_12px_32px_-8px_rgba(0,212,255,0.18)]',
               'transition-all duration-300 ease-out',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--argus)]/50',
             )}
@@ -212,15 +211,18 @@ function AssistantBubble({ content, sources = [] }) {
           <Markdown>{content}</Markdown>
         </div>
         {sources.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 pt-0.5">
             {sources.map((src, i) => (
               <Badge
                 key={i}
+                asChild
                 variant="outline"
-                className="font-mono text-[10px] gap-1 h-auto py-1 px-2.5 cursor-pointer hover:text-[var(--argus)] hover:border-[var(--argus)]/40 hover:bg-[var(--argus)]/5 transition-colors"
+                className="font-mono text-[10px] gap-1 h-auto py-1 px-2.5 cursor-pointer hover:text-[var(--argus)] hover:border-[var(--argus)]/40 hover:bg-[var(--argus)]/5 hover:-translate-y-0.5 transition-all"
               >
-                <ExternalLink className="w-2.5 h-2.5" aria-hidden="true" />
-                {src}
+                <a href={src.url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-2.5 h-2.5" aria-hidden="true" />
+                  {src.title}
+                </a>
               </Badge>
             ))}
           </div>
@@ -276,7 +278,7 @@ function ChatHistory({ messages, isLoading }) {
 
 // ─── Chat Input Bar ───────────────────────────────────────────────────────────
 
-function ChatInputBar({ value, onChange, onSubmit, isLoading }) {
+function ChatInputBar({ value, onChange, onSubmit, isLoading, centered }) {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -285,7 +287,13 @@ function ChatInputBar({ value, onChange, onSubmit, isLoading }) {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-20 px-4 md:px-6 pb-6 pointer-events-none">
+    <div
+      className={cn(
+        'fixed bottom-0 left-0 right-0 z-20 px-4 md:px-6 pb-6 pointer-events-none',
+        'transition-transform duration-700 ease-out',
+        centered ? '-translate-y-[calc(50vh_-_50%)]' : 'translate-y-0'
+      )}
+    >
       <div className="max-w-3xl mx-auto pointer-events-auto">
         <div className="floating-pill flex items-center gap-3 px-5 py-2.5 rounded-full transition-all duration-300">
           <Search className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
@@ -314,7 +322,7 @@ function ChatInputBar({ value, onChange, onSubmit, isLoading }) {
               'bg-[var(--argus)] hover:bg-[var(--argus)]/90 text-background',
               'disabled:opacity-40 disabled:cursor-not-allowed',
               'transition-all duration-200',
-              'hover:shadow-[0_0_16px_rgba(0,136,170,0.5)] dark:hover:shadow-[0_0_16px_rgba(0,212,255,0.5)]',
+              'hover:-translate-y-0.5 hover:shadow-[0_0_16px_rgba(101,146,135,0.5)] dark:hover:shadow-[0_0_16px_rgba(156,176,128,0.5)]',
             )}
           >
             <ArrowUp className="w-4 h-4" aria-hidden="true" />
@@ -332,22 +340,25 @@ function ChatInputBar({ value, onChange, onSubmit, isLoading }) {
 
 export default function ChatPage({ isDark, onToggle }) {
   const { messages, input, setInput, isLoading, sendMessage } = useChat()
+  const { suggestions } = useSuggestions()
   const hasMessages = messages.length > 0
+  const cardsLoaded = suggestions.length > 0
+  const centered = !hasMessages && !cardsLoaded
 
   return (
     <div
       className="bg-background h-screen w-screen overflow-hidden text-foreground flex flex-col selection:bg-[var(--argus)]/30"
     >
       <style>{`
-        :root { --argus: #0088aa; }
-        .dark { --argus: #00d4ff; }
+        :root { --argus: #659287; }
+        .dark { --argus: #9CB080; }
 
         @keyframes tickerScroll {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
         .ticker-track {
-          animation: tickerScroll 73s linear infinite;
+          animation: tickerScroll 183s linear infinite;
         }
         .ticker-container:hover .ticker-track {
           animation-play-state: paused;
@@ -368,18 +379,18 @@ export default function ChatPage({ isDark, onToggle }) {
 
         /* Glass bubble — user (teal) */
         .glass-user {
-          background: linear-gradient(135deg, rgba(0,136,170,0.22) 0%, rgba(0,136,170,0.07) 100%);
+          background: linear-gradient(135deg, rgba(101,146,135,0.22) 0%, rgba(101,146,135,0.07) 100%);
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
-          border: 1px solid rgba(0,136,170,0.25);
-          border-top-color: rgba(0,136,170,0.5);
-          box-shadow: 0 4px 20px -4px rgba(0,0,0,0.12), inset 0 1px 0 rgba(0,136,170,0.25);
+          border: 1px solid rgba(101,146,135,0.25);
+          border-top-color: rgba(101,146,135,0.5);
+          box-shadow: 0 4px 20px -4px rgba(0,0,0,0.12), inset 0 1px 0 rgba(101,146,135,0.25);
         }
         .dark .glass-user {
-          background: linear-gradient(135deg, rgba(0,212,255,0.18) 0%, rgba(0,212,255,0.05) 100%);
-          border-color: rgba(0,212,255,0.22);
-          border-top-color: rgba(0,212,255,0.5);
-          box-shadow: 0 4px 20px -4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(0,212,255,0.22);
+          background: linear-gradient(135deg, rgba(156,176,128,0.18) 0%, rgba(156,176,128,0.05) 100%);
+          border-color: rgba(156,176,128,0.22);
+          border-top-color: rgba(156,176,128,0.5);
+          box-shadow: 0 4px 20px -4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(156,176,128,0.22);
         }
 
         /* Glass bubble — assistant (neutral).
@@ -408,9 +419,9 @@ export default function ChatPage({ isDark, onToggle }) {
             inset 0 1px 0 rgba(255,255,255,0.7);
         }
         .floating-pill:focus-within {
-          border-color: rgba(0,136,170,0.5);
+          border-color: rgba(101,146,135,0.5);
           box-shadow:
-            0 12px 48px -8px rgba(0,136,170,0.28),
+            0 12px 48px -8px rgba(101,146,135,0.28),
             inset 0 1px 0 rgba(255,255,255,0.7);
         }
         .dark .floating-pill {
@@ -421,9 +432,9 @@ export default function ChatPage({ isDark, onToggle }) {
             inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .dark .floating-pill:focus-within {
-          border-color: rgba(0,212,255,0.5);
+          border-color: rgba(156,176,128,0.5);
           box-shadow:
-            0 12px 48px -8px rgba(0,212,255,0.28),
+            0 12px 48px -8px rgba(156,176,128,0.28),
             inset 0 1px 0 rgba(255,255,255,0.08);
         }
       `}</style>
@@ -432,7 +443,7 @@ export default function ChatPage({ isDark, onToggle }) {
           Kept in the upper region so it never reaches the input scrim. */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div className="absolute -top-[20%] -left-[10%] w-[55vw] h-[55vw] rounded-full bg-[var(--argus)]/[0.10] blur-[120px]" />
-        <div className="absolute -top-[5%] right-[-12%] w-[48vw] h-[48vw] rounded-full bg-blue-600/[0.08] blur-[140px]" />
+        <div className="absolute -top-[5%] right-[-12%] w-[48vw] h-[48vw] rounded-full bg-[var(--argus)]/[0.08] blur-[140px]" />
       </div>
 
       {/* Fixed header: ticker + nav */}
@@ -447,11 +458,15 @@ export default function ChatPage({ isDark, onToggle }) {
           <HeroHeader collapsed={hasMessages} />
 
           {/* Prompt cards — collapses once chat starts */}
-          <div className={cn(
-            'w-full transition-all duration-500 ease-out',
-            hasMessages ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'
-          )}>
-            <PromptSuggestions onSelect={sendMessage} />
+          <div
+            className={cn(
+              'w-full grid transition-[grid-template-rows,opacity] duration-500 ease-out',
+              hasMessages ? 'grid-rows-[0fr] opacity-0 pointer-events-none' : 'grid-rows-[1fr] opacity-100'
+            )}
+          >
+            <div className="overflow-hidden min-h-0 px-2 -mx-2 pt-3 -mt-3 pb-3 -mb-3">
+              <PromptSuggestions suggestions={suggestions} onSelect={sendMessage} />
+            </div>
           </div>
 
           {/* Chat messages — appears after first message */}
@@ -461,12 +476,13 @@ export default function ChatPage({ isDark, onToggle }) {
         </div>
       </main>
 
-      {/* Floating input — always visible */}
+      {/* Floating input — centered until suggestions load, then slides to bottom */}
       <ChatInputBar
         value={input}
         onChange={setInput}
         onSubmit={() => sendMessage(input)}
         isLoading={isLoading}
+        centered={centered}
       />
     </div>
   )

@@ -152,43 +152,55 @@ Status key: `pending` | `in-progress` | `done`
 
 ---
 
-## Phase 8 — LangGraph Orchestration `pending`
+## Phase 8 — LangGraph Orchestration `done`
 
 **Goal:** Wire all agents into a LangGraph graph. `/chat` runs the full pipeline and returns cited sources.
 
-**Pipeline:**
+**Pipeline (as built):**
 ```
-POST /chat
-    │
-    ▼
-LangGraph Orchestrator (graph.py)
-    ├──▶ Market Agent
-    ├──▶ News Agent
-    ├──▶ RAG Agent
-    └──▶ Reasoning Agent → cited answer
-    │
-    ▼
-{ answer, sources, market_snapshot, conversation_id }
+START ──┬──▶ market_agent ───┐
+        ├──▶ news_agent ─────┤
+        └──▶ rag_agent ──────┼──▶ reasoning_agent ──▶ END
+                              │
+                              ▼
+                { answer, sources, market_snapshot, conversation_id }
 ```
 
-**Files to create/update:**
-- `app/agents/graph.py` — LangGraph graph definition
-- `app/agents/reasoning_agent.py` — LLM synthesis with citations
-- `app/api/chat.py` — replace bare LLM call with graph invocation
+Each context-gathering node runs concurrently from `START` and writes a disjoint `ChatState` key (`market_snapshot` / `news_headlines` / `rag_hits`), fanning in to `reasoning_agent`. Blocking tool calls (yfinance, Qdrant, DB) are wrapped in `asyncio.to_thread` so the `async def` `/chat` route never stalls the event loop. `news_agent` here queries the last 8 headlines already in the `articles` table (via `crud.get_recent_articles`) rather than re-hitting RSS — RSS ingestion stays the scheduler's job (Phase 5); this node just answers "what's been happening" fast.
 
-**Milestone:** `/chat` returns the full contract: `{ answer, sources, market_snapshot, conversation_id }`.
+`reasoning_agent` builds one prompt from all contexts, calls `get_llm()`, and returns `answer` + `sources` — sources are the deduped RAG-hit payloads (`title`/`url`/`source`), not LLM-generated, so citation accuracy never depends on the model getting JSON right.
+
+**Files created:**
+- `app/agents/state.py` — `ChatState` TypedDict shared by all nodes
+- `app/agents/market_agent.py`, `app/agents/news_agent.py`, `app/agents/rag_agent.py` — thin async wrappers around existing tools, each with a try/except → safe empty default
+- `app/agents/reasoning_agent.py` — prompt assembly + LLM call + source dedup
+- `app/agents/graph.py` — `build_graph()`, module-level compiled singleton, `run_chat_graph(question, db, conversation_id)`
+
+**Files updated:**
+- `app/llm/prompts.py` / `app/llm/__init__.py` — replaced the unused `chat_prompt` with `reasoning_prompt`
+- `app/api/chat.py` — replaced the bare LLM call with `run_chat_graph`; added `db: Session = Depends(get_db)`
+
+**Milestone met:** `/chat` returns the full contract `{ answer, sources, market_snapshot, conversation_id }` — verified live: a market question returned a cited answer, 5 deduped sources, and a populated 24-asset `market_snapshot`.
 
 ---
 
-## Phase 9 — Conversation Persistence `pending`
+## Phase 9 — Conversation Persistence `done`
 
 **Goal:** Persist all messages to DB. Support multi-turn context via `conversation_id`.
 
-**Files to update:**
-- `app/api/chat.py` — create/lookup conversation, persist user + assistant messages
-- `app/db/crud.py` — `create_conversation`, `append_message`, `get_history`
+**Design:** conversation history is treated as a 4th parallel fan-out node (`history_agent`) alongside market/news/RAG, so multi-turn context flows through the same `reasoning_agent` prompt instead of being bolted on separately. To avoid the current turn contaminating its own history read, `chat.py` runs the graph (which reads *prior* messages only) before persisting the current user + assistant messages — so `history_agent` never sees the in-flight turn.
 
-**Milestone:** Sending the same `conversation_id` twice produces coherent multi-turn context.
+**Files created:**
+- `app/agents/history_agent.py` — 4th fan-out node; pulls `conversation_id` from `ChatState`, `db` from `RunnableConfig`, returns `[{"role", "content"}, ...]`
+
+**Files updated:**
+- `app/db/crud.py` — added `get_history(db, conversation_id, limit=10)` (last 10 messages, oldest-first); also fixed a pre-existing bug where `Article` was never imported (used by `get_recent_articles`, added in Phase 8, but silently only surfaced once something actually called it)
+- `app/agents/state.py` — added `conversation_id`, `conversation_history`
+- `app/agents/graph.py` — wired `history_agent` into the fan-out/fan-in; `run_chat_graph` gained a `conversation_id` param
+- `app/agents/reasoning_agent.py`, `app/llm/prompts.py` — prompt gained a `CONVERSATION HISTORY` section
+- `app/api/chat.py` — look up/create `Conversation` (400 on malformed UUID, 404 on unknown one), `append_message` for user then assistant (with `sources`) after the graph runs
+
+**Milestone met:** sending the same `conversation_id` twice produces coherent multi-turn context — verified live: a follow-up question with no ticker name mentioned ("what was the price again?") correctly recalled Nvidia's price from the prior turn.
 
 ---
 
@@ -200,6 +212,7 @@ LangGraph Orchestrator (graph.py)
 | Render cold start kills APScheduler | Low | In-process scheduler is fine for v1; 30s cold start is documented and acceptable |
 | Qdrant Cloud free tier limits | Low | 1 GB vector storage is sufficient for v1 news volume |
 | Supabase SSL connection | Low | Add `?sslmode=require` to `DATABASE_URL` |
+| Unbounded conversation history inflates prompt size | Medium | `get_history` caps at last 10 messages |
 
 ---
 
@@ -208,4 +221,11 @@ LangGraph Orchestrator (graph.py)
 Phases 1–3 unblock frontend integration fastest (bare chat works after Phase 3).  
 Phases 4–6 add data richness and can be built independently of each other.  
 Phase 7 is the final integration that assembles everything.  
-Phase 8 is persistence polish.
+Phase 8 wires that integration into the live `/chat` pipeline.  
+Phase 9 is persistence polish on top of the working pipeline.
+
+---
+
+## Status: All Phases Complete
+
+Phases 1–9 are `done`. Remaining work is v2 scope (auth, streaming, Redis) — see `CLAUDE.md`'s Key Constraints.

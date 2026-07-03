@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import chat, health, market, suggestions
 from app.pipeline import start_scheduler, stop_scheduler
-from app.rag.retriever import ensure_collection
+from app.rag import ensure_collection
 
 logging.basicConfig(
     level=logging.INFO,

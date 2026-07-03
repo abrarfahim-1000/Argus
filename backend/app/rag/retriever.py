@@ -4,7 +4,8 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from app.config import settings
-from app.rag.embedder import embed_texts
+
+from .embedder import embed_texts
 
 COLLECTION_NAME = "argus_articles"
 VECTOR_SIZE = 384

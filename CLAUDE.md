@@ -13,9 +13,9 @@ The repo is a monorepo:
 | `frontend/` | React 19, Vite 8, Tailwind CSS 4, shadcn/ui (JSX, not TSX) |
 | `backend/` | Python / FastAPI, LangGraph, LangChain, SQLAlchemy + Alembic, Qdrant |
 
-**Current state:** Phases 1–7 are complete. The chat UI is live end-to-end: the backend serves `/health`, `/chat`, `/market/snapshot`, and `/suggestions`; the frontend polls market data every 30 s, renders the live ticker, and loads dynamic LLM-generated prompt cards on startup. News is ingested from four RSS feeds every 15 min via APScheduler (Reuters and CNBC feeds are currently dead — see `docs/PHASE7_ISSUES.md`), with unembedded articles chunked, embedded (`BAAI/bge-small-en-v1.5`), and upserted into Qdrant (`argus_articles`) on every ingestion run. Next milestone is Phase 8: LangGraph orchestration wiring the RAG/market/news agents into `/chat`.
+**Current state:** All 9 backend phases are complete. `/chat` runs a LangGraph pipeline — `market_agent`, `news_agent`, and `rag_agent` fan out concurrently from `START`, `history_agent` joins them with the conversation's prior turns, and all four converge on `reasoning_agent`, which calls the LLM and returns a cited answer. The backend serves `/health`, `/chat`, `/market/snapshot`, and `/suggestions`; the frontend polls market data every 30 s, renders the live ticker, and loads dynamic LLM-generated prompt cards on startup. News is ingested from RSS feeds every 15 min via APScheduler (some feeds are currently dead — see `docs/RAG_ISSUES.md`), with unembedded articles chunked, embedded (`BAAI/bge-small-en-v1.5`), and upserted into Qdrant (`argus_articles`) on every ingestion run. Conversations and messages persist to Postgres, so repeated `conversation_id`s produce coherent multi-turn context.
 
-See `docs/BACKEND_PHASES.md` for the full phase plan and statuses, and `docs/PHASE7_ISSUES.md` for issues hit building the RAG pipeline.
+See `docs/BACKEND_PHASES.md` for the full phase plan and statuses, and `docs/RAG_ISSUES.md` for issues hit building the RAG pipeline.
 
 ---
 
@@ -102,7 +102,7 @@ frontend/src/
 
 **Planned frontend additions:**
 
-None for Phases 7–9 — all remaining work is backend-only.
+None currently planned — Phases 7–9 (RAG, LangGraph orchestration, conversation persistence) were backend-only; `useChat.js` already sends/receives `conversation_id` so multi-turn context works with no frontend changes.
 
 ### Backend — Current File Structure
 
@@ -111,21 +111,30 @@ backend/
 ├── app/
 │   ├── main.py              # FastAPI entry point, CORS, lifespan hooks, logging config
 │   ├── config.py            # pydantic-settings reading .env
+│   ├── agents/
+│   │   ├── __init__.py       # exports run_chat_graph
+│   │   ├── state.py          # ChatState TypedDict shared by all nodes
+│   │   ├── market_agent.py   # wraps tools.fetch_snapshot()
+│   │   ├── news_agent.py     # wraps crud.get_recent_articles() (recent DB headlines)
+│   │   ├── rag_agent.py      # wraps vector_tools.search_articles()
+│   │   ├── history_agent.py  # wraps crud.get_history() via RunnableConfig
+│   │   ├── reasoning_agent.py # prompt assembly + LLM call + source dedup
+│   │   └── graph.py          # build_graph() + compiled singleton + run_chat_graph()
 │   ├── api/
 │   │   ├── __init__.py
 │   │   ├── health.py        # GET /health
-│   │   ├── chat.py          # POST /chat
+│   │   ├── chat.py          # POST /chat — runs run_chat_graph(), persists messages
 │   │   ├── market.py        # GET /market/snapshot
 │   │   └── suggestions.py   # GET /suggestions — 4 dynamic prompt cards, 15-min TTL cache
 │   ├── db/
 │   │   ├── __init__.py
 │   │   ├── models.py        # Article, Conversation, Message (SQLAlchemy)
 │   │   ├── session.py       # get_db FastAPI dependency
-│   │   └── crud.py          # insert/query helpers
+│   │   └── crud.py          # insert/query helpers, incl. get_recent_articles(), get_history()
 │   ├── llm/
 │   │   ├── __init__.py
 │   │   ├── provider.py      # get_llm() — Gemini | OpenRouter switcher
-│   │   ├── prompts.py       # prompt templates
+│   │   ├── prompts.py       # prompt templates, incl. reasoning_prompt
 │   │   └── suggestions.py   # prompt builder + LLM call + Pydantic validation
 │   ├── pipeline/
 │   │   ├── __init__.py
@@ -139,39 +148,35 @@ backend/
 │   └── tools/
 │       ├── __init__.py
 │       ├── market_tools.py  # fetch_snapshot() — intraday yfinance (1 m bars)
-│       ├── news_tools.py    # parse_feeds() — RSS parser + HTML body fetch fallback for 4 sources
-│       └── vector_tools.py  # search_articles() — thin wrapper for Phase 8 RAG agent
+│       ├── news_tools.py    # parse_feeds() — RSS parser + HTML body fetch fallback
+│       └── vector_tools.py  # search_articles() — used by app/agents/rag_agent.py
 ├── alembic/
 ├── alembic.ini
 ├── requirements.txt
 └── .env.example
 ```
 
-**Planned backend additions (Phase 8–9):**
-
-| File | Phase | Purpose |
-|---|---|---|
-| `app/agents/rag_agent.py` | 8 | RAG agent wrapping `vector_tools.search_articles()` |
-| `app/agents/graph.py` | 8 | LangGraph graph definition |
-| `app/agents/market_agent.py` | 8 | Market agent |
-| `app/agents/reasoning_agent.py` | 8 | LLM synthesis with citations |
-
-### LangGraph Agent Pipeline (Phase 8 target)
+### LangGraph Agent Pipeline
 
 ```
 POST /chat
     │
     ▼
-LangGraph Orchestrator (graph.py)
+run_chat_graph() (app/agents/graph.py)
     │
-    ├──▶ Market Agent    — yfinance intraday snapshot
-    ├──▶ News Agent      — RSS: Reuters, CNBC, MarketWatch, Yahoo Finance
-    ├──▶ RAG Agent       — Qdrant semantic search, collection: "argus_articles"
-    └──▶ Reasoning Agent — LLM → cited explanation
+    ├──▶ market_agent   — yfinance intraday snapshot (asyncio.to_thread)
+    ├──▶ news_agent     — last 8 headlines already in the articles table
+    ├──▶ rag_agent      — Qdrant semantic search, collection: "argus_articles"
+    ├──▶ history_agent  — last 10 messages for this conversation_id
+    │        │
+    │        ▼ (fan-in)
+    └──▶ reasoning_agent — LLM call → answer + deduped RAG sources
     │
     ▼
 { answer, sources, market_snapshot, conversation_id }
 ```
+
+The four context nodes run concurrently (LangGraph superstep) since each writes a disjoint `ChatState` key. `app/api/chat.py` persists the user + assistant messages via `crud.append_message` *after* the graph call returns, so `history_agent` never reads the in-flight turn.
 
 ### LLM Provider Abstraction
 
@@ -208,14 +213,14 @@ def get_llm():
 
 **GET /market/snapshot** — returns intraday prices + `change_pct` for all tracked assets.
 
-Tracked assets: `SPY`, `QQQ`, `NVDA`, `MSFT`, `AAPL`, `META`, `INTC`, `VIX`, `BTC`, `GC=F`, `ETH`, `DJI`, `CL=F`
+Tracked assets (see `TICKERS` in `app/tools/market_tools.py`): S&P 500 (`SPY`), Nasdaq-100 (`QQQ`), Dow Jones (`^DJI`), Russell (`IWM`), Fear Gauge/VIX (`^VIX`), Treasuries (`TLT`), Nvidia (`NVDA`), Microsoft (`MSFT`), Apple (`AAPL`), Meta (`META`), Google (`GOOGL`), Amazon (`AMZN`), Tesla (`TSLA`), SpaceX (`SPCX`), JPMorgan (`JPM`), Intel (`INTC`), Bitcoin (`BTC-USD`), Ethereum (`ETH-USD`), Gold (`GC=F`), Silver (`SI=F`), WTI Crude (`CL=F`), Brent Crude (`BZ=F`), USD (`DX-Y.NYB`), N225 (`^N225`), FTSE (`^FTSE`), DAX (`^GDAXI`)
 
 **GET /suggestions** — returns 4 LLM-generated prompt cards (15-min server-side cache):
 ```json
 [{ "icon": "TrendingDown", "title": "...", "desc": "..." }]
 ```
 
-**GET /health** — `{ "status": "ok", "llm_provider": "gemini" }`
+**GET /health** — `{ "status": "ok", "llm_provider": "openrouter" }` (`llm_provider` reflects whichever provider `get_llm()` actually selected, per `LLM_PROVIDER` env var)
 
 ### Database Schema
 

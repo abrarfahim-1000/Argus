@@ -7,9 +7,17 @@ SYSTEM_PROMPT = (
     "If you don't have reliable information on something, say so."
 )
 
-chat_prompt = ChatPromptTemplate.from_messages(
+reasoning_prompt = ChatPromptTemplate.from_messages(
     [
         ("system", SYSTEM_PROMPT),
-        ("human", "{question}"),
+        (
+            "human",
+            "MARKET SNAPSHOT:\n{market_context}\n\n"
+            "RECENT HEADLINES:\n{news_context}\n\n"
+            "RELEVANT ARTICLES:\n{rag_context}\n\n"
+            "CONVERSATION HISTORY:\n{history_context}\n\n"
+            "QUESTION: {question}\n\n"
+            "Answer using the context above. Cite article titles when you rely on them.",
+        ),
     ]
 )

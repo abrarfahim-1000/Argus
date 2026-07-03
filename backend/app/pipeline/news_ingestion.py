@@ -2,11 +2,9 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from app.db.models import Article
-from app.rag.chunker import chunk_text
-from app.rag.retriever import upsert_chunks
-from app.tools import parse_feeds
-from app.tools.news_tools import RSS_SOURCES
+from app.db import Article
+from app.rag import chunk_text, upsert_chunks
+from app.tools import RSS_SOURCES, parse_feeds
 
 logger = logging.getLogger(__name__)
 
