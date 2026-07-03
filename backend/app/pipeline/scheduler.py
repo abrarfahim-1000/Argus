@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -27,13 +27,13 @@ def start_scheduler() -> None:
     _scheduler.add_job(
         _ingestion_job,
         trigger="interval",
-        minutes=15,
-        next_run_time=datetime.now(),
+        minutes=60,
+        next_run_time=datetime.now() + timedelta(minutes=2),
         id="news_ingestion",
         replace_existing=True,
     )
     _scheduler.start()
-    logger.info("Scheduler started — news ingestion every 15 min")
+    logger.info("Scheduler started — news ingestion every 60 min")
 
 
 def stop_scheduler() -> None:

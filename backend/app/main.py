@@ -26,7 +26,7 @@ app = FastAPI(title="Argus API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173","https://argus-gold-phi.vercel.app/"],
+    allow_origins=["http://localhost:5173", "https://argus-fin.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
