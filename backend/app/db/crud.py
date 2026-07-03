@@ -2,7 +2,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.db import Article, Conversation, Message
+from app.db import Article, Conversation, Message, SnapshotCache
 
 
 def create_conversation(db: Session) -> Conversation:
@@ -30,6 +30,22 @@ def get_history(db: Session, conversation_id: uuid.UUID, limit: int = 10) -> lis
         .all()
     )
     return list(reversed(messages))
+
+
+def get_snapshot(db: Session, key: str) -> SnapshotCache | None:
+    return db.query(SnapshotCache).filter(SnapshotCache.key == key).first()
+
+
+def upsert_snapshot(db: Session, key: str, payload) -> SnapshotCache:
+    row = get_snapshot(db, key)
+    if row is None:
+        row = SnapshotCache(key=key, payload=payload)
+        db.add(row)
+    else:
+        row.payload = payload
+    db.commit()
+    db.refresh(row)
+    return row
 
 
 def append_message(

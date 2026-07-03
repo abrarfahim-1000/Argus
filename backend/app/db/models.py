@@ -23,6 +23,19 @@ class Article(Base):
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
 
+class SnapshotCache(Base):
+    __tablename__ = "snapshot_cache"
+
+    key = Column(String, primary_key=True)  # "market_snapshot" | "suggestions"
+    payload = Column(JSONB, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
 class Conversation(Base):
     __tablename__ = "conversations"
 

@@ -1,4 +1,4 @@
-from .models import Article, Base, Conversation, Message
+from .models import Article, Base, Conversation, Message, SnapshotCache
 from .session import SessionLocal, engine, get_db
 from .crud import (
     append_message,
@@ -6,6 +6,8 @@ from .crud import (
     get_conversation,
     get_history,
     get_recent_articles,
+    get_snapshot,
+    upsert_snapshot,
 )
 
 __all__ = [
@@ -13,6 +15,7 @@ __all__ = [
     "Article",
     "Conversation",
     "Message",
+    "SnapshotCache",
     "engine",
     "SessionLocal",
     "get_db",
@@ -21,4 +24,6 @@ __all__ = [
     "append_message",
     "get_recent_articles",
     "get_history",
+    "get_snapshot",
+    "upsert_snapshot",
 ]

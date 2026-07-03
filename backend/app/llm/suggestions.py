@@ -58,8 +58,9 @@ The questions should reflect actual market moves and news from today. Be specifi
 JSON array only — no markdown, no explanation:"""
 
 
-def generate_suggestions(db: Session) -> list[SuggestionItem]:
-    snapshot = fetch_snapshot()
+def generate_suggestions(db: Session, snapshot: dict | None = None) -> list[SuggestionItem]:
+    if snapshot is None:
+        snapshot = fetch_snapshot()
     articles = db.query(Article).order_by(Article.published_at.desc()).limit(8).all()
     headlines = [a.title for a in articles if a.title]
 

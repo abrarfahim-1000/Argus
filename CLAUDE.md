@@ -13,7 +13,7 @@ The repo is a monorepo:
 | `frontend/` | React 19, Vite 8, Tailwind CSS 4, shadcn/ui (JSX, not TSX) |
 | `backend/` | Python / FastAPI, LangGraph, LangChain, SQLAlchemy + Alembic, Qdrant |
 
-**Current state:** All 9 backend phases are complete. `/chat` runs a LangGraph pipeline — `market_agent`, `news_agent`, and `rag_agent` fan out concurrently from `START`, `history_agent` joins them with the conversation's prior turns, and all four converge on `reasoning_agent`, which calls the LLM and returns a cited answer. The backend serves `/health`, `/chat`, `/market/snapshot`, and `/suggestions`; the frontend polls market data every 30 s, renders the live ticker, and loads dynamic LLM-generated prompt cards on startup. News is ingested from RSS feeds every 15 min via APScheduler (some feeds are currently dead — see `docs/RAG_ISSUES.md`), with unembedded articles chunked, embedded via a remote OpenRouter embeddings API call (`nvidia/llama-nemotron-embed-vl-1b-v2:free`, 384-dim), and upserted into Qdrant (`argus_articles`) on every ingestion run. Conversations and messages persist to Postgres, so repeated `conversation_id`s produce coherent multi-turn context.
+**Current state:** All 9 backend phases are complete. `/chat` runs a LangGraph pipeline — `market_agent`, `news_agent`, and `rag_agent` fan out concurrently from `START`, `history_agent` joins them with the conversation's prior turns, and all four converge on `reasoning_agent`, which calls the LLM and returns a cited answer. The backend serves `/health`, `/chat`, `/market/snapshot`, and `/suggestions`; the frontend polls market data every 30 s, renders the live ticker, and loads dynamic LLM-generated prompt cards on startup. News is ingested from RSS feeds every 60 min via APScheduler (some feeds are currently dead — see `docs/RAG_ISSUES.md`), with unembedded articles chunked, embedded via a remote OpenRouter embeddings API call (`nvidia/llama-nemotron-embed-vl-1b-v2:free`, 384-dim), and upserted into Qdrant (`argus_articles`) on every ingestion run. A second hourly job, offset 15 min after news ingestion, refreshes the market snapshot and regenerates the 4 suggestion prompt cards, persisting both to a `snapshot_cache` table so `/market/snapshot` and `/suggestions` read pre-computed data instead of hitting yfinance/the LLM on every request. Conversations and messages persist to Postgres, so repeated `conversation_id`s produce coherent multi-turn context.
 
 See `docs/BACKEND_PHASES.md` for the full phase plan and statuses, and `docs/RAG_ISSUES.md` for issues hit building the RAG pipeline.
 
@@ -124,13 +124,13 @@ backend/
 │   │   ├── __init__.py
 │   │   ├── health.py        # GET /health
 │   │   ├── chat.py          # POST /chat — runs run_chat_graph(), persists messages
-│   │   ├── market.py        # GET /market/snapshot
-│   │   └── suggestions.py   # GET /suggestions — 4 dynamic prompt cards, 15-min TTL cache
+│   │   ├── market.py        # GET /market/snapshot — reads snapshot_cache, live-fetch fallback on cold cache
+│   │   └── suggestions.py   # GET /suggestions — reads snapshot_cache, live-generate fallback on cold cache
 │   ├── db/
 │   │   ├── __init__.py
-│   │   ├── models.py        # Article, Conversation, Message (SQLAlchemy)
+│   │   ├── models.py        # Article, Conversation, Message, SnapshotCache (SQLAlchemy)
 │   │   ├── session.py       # get_db FastAPI dependency
-│   │   └── crud.py          # insert/query helpers, incl. get_recent_articles(), get_history()
+│   │   └── crud.py          # insert/query helpers, incl. get_recent_articles(), get_history(), get_snapshot(), upsert_snapshot()
 │   ├── llm/
 │   │   ├── __init__.py
 │   │   ├── provider.py      # get_llm() — Gemini | OpenRouter switcher
@@ -139,7 +139,8 @@ backend/
 │   ├── pipeline/
 │   │   ├── __init__.py
 │   │   ├── news_ingestion.py  # fetch → dedup by URL → store → chunk/embed/upsert to Qdrant
-│   │   └── scheduler.py       # APScheduler (15-min interval), wired into lifespan
+│   │   ├── market_refresh.py  # refresh_market_and_suggestions() — writes snapshot_cache rows
+│   │   └── scheduler.py       # APScheduler: news ingestion (60-min) + market/suggestions refresh (60-min, +15min offset), wired into lifespan
 │   ├── rag/
 │   │   ├── __init__.py
 │   │   ├── chunker.py        # chunk_text() — tiktoken sliding window (512 tokens, 50 overlap)
@@ -211,11 +212,11 @@ def get_llm():
 }
 ```
 
-**GET /market/snapshot** — returns intraday prices + `change_pct` for all tracked assets.
+**GET /market/snapshot** — returns intraday prices + `change_pct` for all tracked assets, read from the `snapshot_cache` table (refreshed hourly by the scheduler; falls back to a live yfinance fetch — which it then caches — only if the cache row doesn't exist yet, e.g. right after a fresh deploy).
 
 Tracked assets (see `TICKERS` in `app/tools/market_tools.py`): S&P 500 (`SPY`), Nasdaq-100 (`QQQ`), Dow Jones (`^DJI`), Russell (`IWM`), Fear Gauge/VIX (`^VIX`), Treasuries (`TLT`), Nvidia (`NVDA`), Microsoft (`MSFT`), Apple (`AAPL`), Meta (`META`), Google (`GOOGL`), Amazon (`AMZN`), Tesla (`TSLA`), SpaceX (`SPCX`), JPMorgan (`JPM`), Intel (`INTC`), Bitcoin (`BTC-USD`), Ethereum (`ETH-USD`), Gold (`GC=F`), Silver (`SI=F`), WTI Crude (`CL=F`), Brent Crude (`BZ=F`), USD (`DX-Y.NYB`), N225 (`^N225`), FTSE (`^FTSE`), DAX (`^GDAXI`)
 
-**GET /suggestions** — returns 4 LLM-generated prompt cards (15-min server-side cache):
+**GET /suggestions** — returns 4 LLM-generated prompt cards, read from the `snapshot_cache` table (refreshed hourly by the scheduler; falls back to a live LLM generation — which it then caches — only if the cache row doesn't exist yet; falls back further to `STATIC_FALLBACK` if that live generation also fails):
 ```json
 [{ "icon": "TrendingDown", "title": "...", "desc": "..." }]
 ```
@@ -229,6 +230,8 @@ Tracked assets (see `TICKERS` in `app/tools/market_tools.py`): S&P 500 (`SPY`), 
 **conversations** — `id` (UUID PK), `created_at`
 
 **messages** — `id` (UUID PK), `conversation_id` (FK), `role` (user/assistant), `content`, `sources` (JSONB), `created_at`
+
+**snapshot_cache** — `key` (String PK — `"market_snapshot"` | `"suggestions"`), `payload` (JSONB), `updated_at`
 
 ---
 
@@ -251,7 +254,7 @@ ENVIRONMENT=development          # development | production
 ## Key Constraints (v1)
 
 - No auth, no streaming responses, no Redis cache — all deferred to v2.
-- News refresh runs every 15 min via APScheduler inside the FastAPI process (no Celery/Redis needed).
+- News refresh runs every 60 min via APScheduler inside the FastAPI process (no Celery/Redis needed). A second APScheduler job, offset 15 min after news ingestion, refreshes the market snapshot and suggestion cards hourly and persists both to `snapshot_cache`.
 - Market ticker uses intraday yfinance data: `period="1d", interval="1m"`, comparing the last two 1-minute bars for `change_pct`.
 - Embeddings run remotely via OpenRouter (`nvidia/llama-nemotron-embed-vl-1b-v2:free`, 384-dim) — no local model is loaded, so there's no torch/sentence-transformers dependency or memory cost on the server.
 - Qdrant collection name: `argus_articles`. Chunk size: 512 tokens, 50-token overlap. Top-k retrieval: 5 articles.
