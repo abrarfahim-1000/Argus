@@ -36,7 +36,7 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
         conversation = create_conversation(db)
 
     try:
-        result = await run_chat_graph(req.message, db, conversation.id)
+        result = await run_chat_graph(req.message, conversation.id)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Chat pipeline error: {exc}") from exc
 

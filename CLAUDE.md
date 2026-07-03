@@ -257,7 +257,7 @@ ENVIRONMENT=development          # development | production
 - News refresh runs every 60 min via APScheduler inside the FastAPI process (no Celery/Redis needed). A second APScheduler job, offset 15 min after news ingestion, refreshes the market snapshot and suggestion cards hourly and persists both to `snapshot_cache`.
 - Market ticker uses intraday yfinance data: `period="1d", interval="1m"`, comparing the last two 1-minute bars for `change_pct`.
 - Embeddings run remotely via OpenRouter (`nvidia/llama-nemotron-embed-vl-1b-v2:free`, 384-dim) — no local model is loaded, so there's no torch/sentence-transformers dependency or memory cost on the server.
-- Qdrant collection name: `argus_articles`. Chunk size: 512 tokens, 50-token overlap. Top-k retrieval: 5 articles.
+- Qdrant collection name: `argus_articles`. Chunk size: 512 tokens, 50-token overlap. Top-k retrieval: 8 articles.
 - Deploy targets: Vercel (frontend), Render free tier (backend — sleeps after 15 min inactivity, ~30s cold start is acceptable), Supabase free tier (PostgreSQL), Qdrant Cloud free tier.
 
 ## Conventions

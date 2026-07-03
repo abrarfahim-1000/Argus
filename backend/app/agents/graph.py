@@ -1,7 +1,6 @@
 import uuid
 
 from langgraph.graph import END, START, StateGraph
-from sqlalchemy.orm import Session
 
 from .history_agent import history_agent
 from .market_agent import market_agent
@@ -34,7 +33,7 @@ def build_graph():
 _compiled_graph = build_graph().compile()
 
 
-async def run_chat_graph(question: str, db: Session, conversation_id: uuid.UUID) -> ChatState:
+async def run_chat_graph(question: str, conversation_id: uuid.UUID) -> ChatState:
     initial_state: ChatState = {
         "question": question,
         "conversation_id": conversation_id,
@@ -45,6 +44,4 @@ async def run_chat_graph(question: str, db: Session, conversation_id: uuid.UUID)
         "answer": "",
         "sources": [],
     }
-    return await _compiled_graph.ainvoke(
-        initial_state, config={"configurable": {"db": db}}
-    )
+    return await _compiled_graph.ainvoke(initial_state)
