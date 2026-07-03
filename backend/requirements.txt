@@ -10,7 +10,7 @@ langchain-core
 langchain-google-genai
 langchain-openai
 langgraph
-google-generativeai
+
 
 # Market Data
 yfinance
@@ -24,7 +24,6 @@ beautifulsoup4
 apscheduler
 
 # RAG
-sentence-transformers
 qdrant-client
 tiktoken
 
