@@ -82,3 +82,5 @@ Desktop.ini
 *.tmp
 *.bak
 .cache/
+CLAUDE.md
+docs/DECISIONS.md
