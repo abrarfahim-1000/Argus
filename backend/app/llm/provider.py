@@ -8,7 +8,7 @@ def get_llm():
     """OpenRouter is primary; Gemini is the fallback when no OpenRouter key is configured."""
     if settings.llm_provider == "openrouter" and settings.openrouter_api_key:
         return ChatOpenAI(
-            model="nvidia/nemotron-3-super-120b-a12b:free",
+            model="nvidia/nemotron-3-nano-30b-a3b:free",
             base_url="https://openrouter.ai/api/v1",
             api_key=settings.openrouter_api_key,
         )
