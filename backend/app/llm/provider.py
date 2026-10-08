@@ -8,7 +8,7 @@ def get_llm():
     """OpenRouter is primary; Gemini is the fallback when no OpenRouter key is configured."""
     if settings.llm_provider == "openrouter" and settings.openrouter_api_key:
         return ChatOpenAI(
-            model="inclusionai/ling-3.0-flash-fin:free",
+            model="openrouter/free",
             base_url="https://openrouter.ai/api/v1",
             api_key=settings.openrouter_api_key,
         )
